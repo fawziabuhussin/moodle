@@ -8,6 +8,7 @@ export const PERMISSIONS = [
   "manage_stipends",
   "manage_private_sessions",
   "send_global_notifications",
+  "manage_food_polls",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];

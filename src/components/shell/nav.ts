@@ -13,7 +13,8 @@ export type IconName =
   | "roles"
   | "settings"
   | "terminal"
-  | "files";
+  | "files"
+  | "food";
 
 export type NavKey =
   | "dashboard"
@@ -33,7 +34,8 @@ export type NavKey =
   | "studentNotifications"
   | "studentFiles"
   | "studentStipends"
-  | "studentCourses";
+  | "studentCourses"
+  | "food";
 
 export type NavSection = "academic" | "admin" | "system";
 
@@ -56,6 +58,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/stipends", key: "stipends", icon: "wallet", section: "admin", studentOr: "manage_stipends" },
   { href: "/sessions", key: "sessions", icon: "sessions", section: "academic", studentOr: "manage_private_sessions" },
   { href: "/courses", key: "courses", icon: "courses", section: "academic" },
+  { href: "/food/manager", key: "food", icon: "food", section: "academic", permission: "manage_food_polls" },
   { href: "/notifications", key: "notifications", icon: "bell", section: "admin" },
   { href: "/users", key: "users", icon: "users", section: "admin", permission: "manage_users_and_roles" },
   { href: "/roles", key: "roles", icon: "roles", section: "admin", permission: "manage_users_and_roles" },
@@ -72,4 +75,5 @@ export const STUDENT_NAV: NavItem[] = [
   { href: "/files", key: "studentFiles", icon: "files", section: "academic" },
   { href: "/stipends", key: "studentStipends", icon: "wallet", section: "academic" },
   { href: "/courses", key: "studentCourses", icon: "courses", section: "academic" },
+  { href: "/food", key: "food", icon: "food", section: "academic" },
 ];

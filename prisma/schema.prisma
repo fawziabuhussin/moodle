@@ -148,6 +148,8 @@ model User {
   driveFiles           DriveFile[]
   askedQuestions       CourseQuestion[] @relation("QuestionAuthor")
   courseAnswers        CourseAnswer[]   @relation("AnswerAuthor")
+  foodPollsCreated     FoodPoll[]       @relation("FoodPollAuthor")
+  foodOrders           FoodOrder[]
 
   @@index([isActive])
 }
@@ -553,4 +555,79 @@ model DriveFile {
   @@index([folderId])
   @@index([studentId])
   @@index([syncKey])
+}
+
+enum FoodPollStatus {
+  OPEN
+  CLOSED
+}
+
+model Restaurant {
+  id        String     @id @default(cuid())
+  name      String
+  logoIcon  String     @default("🍽️")
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     MenuItem[]
+  polls     FoodPoll[]
+}
+
+model MenuItem {
+  id           String         @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  category     String         @default("")
+  basePrice    Decimal        @default(0) @db.Decimal(10, 2)
+  emoji        String         @default("🍽️")
+  sortOrder    Int            @default(0)
+  additions    MenuAddition[]
+  orders       FoodOrder[]
+
+  @@index([restaurantId])
+}
+
+model MenuAddition {
+  id         String   @id @default(cuid())
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  name       String
+  isDefault  Boolean  @default(false)
+  price      Decimal  @default(0) @db.Decimal(10, 2)
+  emoji      String   @default("")
+  sortOrder  Int      @default(0)
+
+  @@index([menuItemId])
+}
+
+model FoodPoll {
+  id           String         @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  status       FoodPollStatus @default(OPEN)
+  openedAt     DateTime       @default(now())
+  closesAt     DateTime
+  createdById  String
+  createdBy    User           @relation("FoodPollAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  orders       FoodOrder[]
+
+  @@index([status, closesAt])
+}
+
+model FoodOrder {
+  id         String   @id @default(cuid())
+  pollId     String
+  poll       FoodPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Restrict)
+  additions  Json
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([pollId, studentId])
+  @@index([pollId])
 }

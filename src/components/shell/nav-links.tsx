@@ -10,6 +10,7 @@ import {
   Ellipsis,
   Folder,
   GraduationCap,
+  UtensilsCrossed,
   House,
   IdCard,
   KeyRound,
@@ -36,6 +37,7 @@ const icons = {
   settings: Settings,
   terminal: IdCard,
   files: Folder,
+  food: UtensilsCrossed,
 } satisfies Record<IconName, typeof House>;
 
 export type ShellLink = { href: string; label: string; icon: IconName; section: NavSection };
