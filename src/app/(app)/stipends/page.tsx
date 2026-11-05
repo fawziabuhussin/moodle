@@ -91,6 +91,13 @@ export default async function StipendsPage({ searchParams }: { searchParams: Pro
     branch: dict.students.bankBranch,
     accountNumber: dict.students.bankAccount,
     confirmation: dict.students.bankConfirmation,
+    post: dict.stipends.post,
+    edit: dict.stipends.edit,
+    notPosted: dict.stipends.notPosted,
+    net: dict.stipends.net,
+    remove: dict.stipends.remove,
+    confirmDelete: dict.stipends.confirmDelete,
+    invalid: dict.errors.invalid,
   };
 
   return (
@@ -108,7 +115,10 @@ export default async function StipendsPage({ searchParams }: { searchParams: Pro
             id: payment?.id ?? "",
             studentId: student.id,
             name: fullName(student),
-            amount: payment ? asNumber(payment.finalAmount) : null,
+            amount: payment ? asNumber(payment.baseAmount) : null,
+            deduction: payment ? asNumber(payment.deductionAmount) : 0,
+            bonus: payment ? asNumber(payment.bonusAmount) : 0,
+            finalAmount: payment ? asNumber(payment.finalAmount) : null,
             notes: payment?.notes ?? "",
             status: payment?.status ?? "PENDING",
             accountLine: [
