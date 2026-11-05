@@ -44,7 +44,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               passwordLabel={dict.login.password}
               submitLabel={dict.login.submit}
               pendingLabel={dict.login.submitting}
-              quickLabel={dict.login.quick}
             />
           </div>
           <p className="mt-6 text-center text-xs text-slate-500">

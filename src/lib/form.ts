@@ -18,7 +18,7 @@ export function isNationalId(value: string) {
 }
 
 export function isLoginIdentifier(value: string) {
-  return isEmail(value) || isNationalId(value);
+  return isEmail(value) || isNationalId(value) || /^[a-z0-9._-]{3,64}$/.test(value);
 }
 
 export function isUniqueConflict(error: unknown) {
