@@ -17,7 +17,9 @@ async function tokenIsSigned(token: string) {
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/api") || pathname.startsWith("/_next")) return NextResponse.next();
+  // Server actions must answer with their own flight response. A redirect here
+  // reaches the browser as a normal page and the client throws "unexpected response".
+  if (request.headers.has("next-action") || pathname.startsWith("/api") || pathname.startsWith("/_next")) return NextResponse.next();
 
   const token = request.cookies.get(TOKEN_COOKIE)?.value;
   const signed = token ? await tokenIsSigned(token) : false;
