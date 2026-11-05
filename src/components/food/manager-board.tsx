@@ -1,5 +1,6 @@
 "use client";
 
+import * as Dialog from "@radix-ui/react-dialog";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -13,6 +14,12 @@ type HistoryEntry = { id: string; when: string; menuName: string; price: string 
 
 export type FoodLabels = {
   openPoll: string;
+  newPoll: string;
+  newPollTitle: string;
+  newPollConfirm: string;
+  newPollStart: string;
+  closedHint: string;
+  cancel: string;
   minutes: string;
   extend: string;
   close: string;
@@ -54,6 +61,7 @@ export function ManagerBoard({
   const [now, setNow] = useState(() => Date.now());
   const [copied, setCopied] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [confirmNew, setConfirmNew] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -108,53 +116,63 @@ export function ManagerBoard({
                 className="font-mono text-5xl font-semibold tabular-nums text-orange-950"
                 dir="ltr"
               >
-                {open ? clock : "00:00"}
+                {clock}
               </motion.p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" variant="outline" disabled={pending} onClick={() => run(() => extendFoodPollAction(null, form({ pollId: poll.id })))}>
                 {labels.extend}
               </Button>
-              <Button type="button" variant="destructive" disabled={pending || !open} onClick={() => run(() => closeFoodPollAction(null, form({ pollId: poll.id })))}>
+              <Button type="button" variant="destructive" disabled={pending} onClick={() => run(() => closeFoodPollAction(null, form({ pollId: poll.id })))}>
                 {labels.close}
+              </Button>
+              <Button type="button" variant="outline" disabled={pending || menus.length === 0} onClick={() => setConfirmNew(true)}>
+                {labels.newPoll}
+              </Button>
+            </div>
+          </div>
+        ) : poll ? (
+          <div className="grid gap-3">
+            <p className="text-sm leading-6 text-orange-950">{labels.closedHint}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" disabled={pending} onClick={() => run(() => extendFoodPollAction(null, form({ pollId: poll.id })))}>
+                {labels.extend}
+              </Button>
+              <Button type="button" disabled={pending || menus.length === 0} className="bg-orange-600 hover:bg-orange-700" onClick={() => setConfirmNew(true)}>
+                {labels.newPoll}
               </Button>
             </div>
           </div>
         ) : (
-          <form
-            className="grid gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const data = new FormData(event.currentTarget);
-              run(() => openFoodPollAction(null, data));
-            }}
-          >
-            <input type="hidden" name="restaurantId" value={restaurantId} />
-            <div className="grid gap-3 sm:grid-cols-3">
-            <label className="grid gap-1 text-sm font-medium text-orange-950">
-              {labels.menu}
-              <Select name="menuId" defaultValue={menus[0]?.id ?? ""}>
-                {menus.map((menu) => (
-                  <option key={menu.id} value={menu.id}>{menu.name}</option>
-                ))}
-              </Select>
-            </label>
-            <label className="grid gap-1 text-sm font-medium text-orange-950">
-              {labels.minutes}
-              <Input name="minutes" type="number" min={1} max={180} defaultValue={15} dir="ltr" />
-            </label>
-            <label className="grid gap-1 text-sm font-medium text-orange-950">
-              {labels.price}
-              <Input name="price" type="number" min={0} step="0.01" placeholder={labels.priceHint} dir="ltr" />
-            </label>
-            </div>
-            <Button type="submit" disabled={pending || menus.length === 0} className="bg-orange-600 hover:bg-orange-700">
-              {labels.openPoll}
-            </Button>
-          </form>
+          <PollFields menus={menus} restaurantId={restaurantId} labels={labels} pending={pending} onOpen={(data) => run(() => openFoodPollAction(null, data))} />
         )}
         {message ? <p className="mt-3 text-sm text-orange-950">{message}</p> : null}
       </section>
+      <Dialog.Root open={confirmNew} onOpenChange={setConfirmNew}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(100vw-1.5rem,28rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-2xl outline-none">
+            <Dialog.Title className="text-lg font-semibold text-slate-950">{labels.newPollTitle}</Dialog.Title>
+            <Dialog.Description className="mt-2 text-sm leading-6 text-slate-600">{labels.newPollConfirm}</Dialog.Description>
+            <div className="mt-4">
+              <PollFields
+                menus={menus}
+                restaurantId={restaurantId}
+                labels={labels}
+                pending={pending}
+                submitLabel={labels.newPollStart}
+                onOpen={(data) => {
+                  setConfirmNew(false);
+                  run(() => openFoodPollAction(null, data));
+                }}
+              />
+            </div>
+            <div className="mt-3 flex justify-end">
+              <Button type="button" variant="outline" onClick={() => setConfirmNew(false)}>{labels.cancel}</Button>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
 
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -172,6 +190,55 @@ export function ManagerBoard({
       <History entries={history} labels={labels} />
       <MenuEditor key={menus.map((menu) => menu.id).join()} restaurantId={restaurantId} menus={menus} pending={pending} labels={labels} onSave={(data) => run(() => saveFoodMenuAction(null, data))} />
     </div>
+  );
+}
+
+function PollFields({
+  menus,
+  restaurantId,
+  labels,
+  pending,
+  submitLabel,
+  onOpen,
+}: {
+  menus: SavedMenu[];
+  restaurantId: string;
+  labels: FoodLabels;
+  pending: boolean;
+  submitLabel?: string;
+  onOpen: (data: FormData) => void;
+}) {
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onOpen(new FormData(event.currentTarget));
+      }}
+    >
+      <input type="hidden" name="restaurantId" value={restaurantId} />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <label className="grid gap-1 text-sm font-medium text-slate-900">
+          {labels.menu}
+          <Select name="menuId" defaultValue={menus[0]?.id ?? ""}>
+            {menus.map((menu) => (
+              <option key={menu.id} value={menu.id}>{menu.name}</option>
+            ))}
+          </Select>
+        </label>
+        <label className="grid gap-1 text-sm font-medium text-slate-900">
+          {labels.minutes}
+          <Input name="minutes" type="number" min={1} max={180} defaultValue={15} dir="ltr" />
+        </label>
+        <label className="grid gap-1 text-sm font-medium text-slate-900">
+          {labels.price}
+          <Input name="price" type="number" min={0} step="0.01" placeholder={labels.priceHint} dir="ltr" />
+        </label>
+      </div>
+      <Button type="submit" disabled={pending || menus.length === 0} className="bg-orange-600 hover:bg-orange-700">
+        {submitLabel ?? labels.openPoll}
+      </Button>
+    </form>
   );
 }
 

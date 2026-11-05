@@ -43,7 +43,8 @@ export default async function FoodManagerPage() {
       },
     }),
   ]);
-  const active = polls.find((poll) => pollIsOpen(poll.status, poll.closesAt)) ?? null;
+  const latest = polls[0] ?? null;
+  const active = latest && pollIsOpen(latest.status, latest.closesAt) ? latest : null;
   const pollDate = (poll: (typeof polls)[number]) => formatCalendarDate(poll.openedAt, zone);
   const dates = [...new Set(polls.map(pollDate))];
   const attended = dates.length === 0 ? [] : await db.attendanceRecord.findMany({
@@ -75,7 +76,7 @@ export default async function FoodManagerPage() {
         notes: order.notes,
         sortOrder: order.menuItem.sortOrder,
       })),
-      [...present.entries()].filter(([id]) => !ordered.has(id)).map(([, name]) => name),
+      poll.orders.length === 0 ? [] : [...present.entries()].filter(([id]) => !ordered.has(id)).map(([, name]) => name),
     );
   };
   const priceOf = (value: { toString(): string } | null) => {
@@ -88,13 +89,13 @@ export default async function FoodManagerPage() {
       <PageHeader title={dict.food.title} description={dict.food.subtitle} />
       <ManagerBoard
         restaurantId={restaurant.id}
-        poll={active ? {
-          id: active.id,
-          status: active.status,
-          closesAt: active.closesAt.toISOString(),
-          restaurantName: active.restaurant.name,
-          logoIcon: active.restaurant.logoIcon,
-          price: priceOf(active.price),
+        poll={latest ? {
+          id: latest.id,
+          status: active ? "OPEN" : "CLOSED",
+          closesAt: latest.closesAt.toISOString(),
+          restaurantName: latest.restaurant.name,
+          logoIcon: latest.restaurant.logoIcon,
+          price: priceOf(latest.price),
         } : null}
         menus={menus.map((menu) => ({
           id: menu.id,
@@ -104,8 +105,8 @@ export default async function FoodManagerPage() {
             return price > 0 ? `${item.name} - ${price}` : item.name;
           }).join("\n"),
         }))}
-        clipboard={active ? clipboardOf(active) : ""}
-        history={polls.filter((poll) => poll.id !== active?.id).map((poll) => ({
+        clipboard={latest ? clipboardOf(latest) : ""}
+        history={polls.filter((poll) => poll.id !== latest?.id).map((poll) => ({
           id: poll.id,
           when: formatDateTime(poll.openedAt, locale, zone),
           menuName: poll.menu?.name ?? poll.restaurant.name,
@@ -115,6 +116,12 @@ export default async function FoodManagerPage() {
         }))}
         labels={{
           openPoll: dict.food.openPoll,
+          newPoll: dict.food.newPoll,
+          newPollTitle: dict.food.newPollTitle,
+          newPollConfirm: dict.food.newPollConfirm,
+          newPollStart: dict.food.newPollStart,
+          closedHint: dict.food.closedHint,
+          cancel: dict.common.cancel,
           minutes: dict.food.minutes,
           extend: dict.food.extend,
           close: dict.food.close,
