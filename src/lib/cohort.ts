@@ -8,24 +8,26 @@ type CohortUser = {
   studentProfile?: { cohort: string | null } | null;
 };
 
-export function activeStudentWhere(): Prisma.UserWhereInput {
+function cohortMatch(cohort: string, badgePrefix: string): Prisma.UserWhereInput {
   return {
-    isActive: true,
     OR: [
-      { studentProfile: { is: { cohort: ACTIVE_COHORT } } },
-      { hardwareBadgeId: { startsWith: "STU-26" } },
+      { studentProfile: { is: { cohort } } },
+      { hardwareBadgeId: { startsWith: badgePrefix } },
     ],
   };
 }
 
+/** Current or archive cohort, including students marked inactive. */
+export function listedStudentWhere(archive = false): Prisma.UserWhereInput {
+  return archive ? cohortMatch(ARCHIVE_COHORT, "STU-25") : cohortMatch(ACTIVE_COHORT, "STU-26");
+}
+
+export function activeStudentWhere(): Prisma.UserWhereInput {
+  return { isActive: true, ...listedStudentWhere(false) };
+}
+
 export function archiveStudentWhere(): Prisma.UserWhereInput {
-  return {
-    isActive: true,
-    OR: [
-      { studentProfile: { is: { cohort: ARCHIVE_COHORT } } },
-      { hardwareBadgeId: { startsWith: "STU-25" } },
-    ],
-  };
+  return { isActive: true, ...listedStudentWhere(true) };
 }
 
 export function isCurrentYearStudent(user: CohortUser) {

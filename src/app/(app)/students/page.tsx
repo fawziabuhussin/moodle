@@ -8,7 +8,7 @@ import { asNumber, formatDate, formatMoney, formatPercent } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n";
 import { hasAnyPermission, hasPermission } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
-import { archiveStudentWhere, activeStudentWhere } from "@/lib/cohort";
+import { listedStudentWhere } from "@/lib/cohort";
 import { attendanceSnapshot } from "@/lib/stipends";
 import { appTimeZone, currentPeriod, monthRange } from "@/lib/time";
 
@@ -28,7 +28,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
   if (!staff && session.roleSlugs.includes("student")) redirect(`/students/${session.id}`);
 
   const archive = (await searchParams).view === "archive";
-  const yearWhere = archive ? archiveStudentWhere() : activeStudentWhere();
+  const yearWhere = listedStudentWhere(archive);
   const db = getPrisma();
   const roleWhere = { roles: { some: { role: { slug: "student" } } } };
   const teacherWhere = staff ? {} : { enrollments: { some: { course: { teachers: { some: { userId: session.id } } } } } };
@@ -37,8 +37,8 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
     select: { id: true },
   })).map((row) => row.id);
   const [activeCount, archiveCount] = await Promise.all([
-    db.user.count({ where: { ...activeStudentWhere(), ...roleWhere, ...teacherWhere } }),
-    db.user.count({ where: { ...archiveStudentWhere(), ...roleWhere, ...teacherWhere } }),
+    db.user.count({ where: { ...listedStudentWhere(false), ...roleWhere, ...teacherWhere } }),
+    db.user.count({ where: { ...listedStudentWhere(true), ...roleWhere, ...teacherWhere } }),
   ]);
 
   const period = currentPeriod();
@@ -120,6 +120,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       volunteering: student.studentProfile?.volunteeringPlace ?? null,
       city: student.studentProfile?.city ?? null,
       psychometry: student.studentProfile?.psychometryTrack ?? null,
+      active: student.isActive,
     };
   });
 
@@ -137,6 +138,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
         activeCount={activeCount}
         archiveCount={archiveCount}
         canAdd={hasPermission(session.permissions, "manage_users_and_roles") && !archive}
+        canManage={hasPermission(session.permissions, "manage_users_and_roles")}
         canLog={hasPermission(session.permissions, "manage_private_sessions") && !archive}
         canStipend={hasPermission(session.permissions, "manage_stipends") && !archive}
         labels={{
@@ -186,6 +188,14 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           activeYear: dict.students.activeYear,
           archiveYear: dict.students.archiveYear,
           archiveNote: dict.students.archiveNote,
+          status: dict.common.status,
+          active: dict.common.active,
+          inactive: dict.common.inactive,
+          edit: dict.common.edit,
+          remove: dict.users.deleteAccount,
+          confirmDelete: dict.users.deleteConfirm,
+          nameAr: dict.students.nameAr,
+          passwordHint: dict.users.passwordHint,
           statuses: {
             PENDING: dict.status.PENDING,
             APPROVED: dict.status.APPROVED,

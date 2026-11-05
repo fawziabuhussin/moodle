@@ -290,6 +290,96 @@ export async function setUserActiveAction(_prev: ActionState, formData: FormData
   revalidatePath(`/users/${id}`);
   revalidatePath("/students");
   revalidatePath("/courses");
+  revalidatePath("/attendance");
+  revalidatePath("/stipends");
+  revalidatePath("/sessions");
+  revalidatePath("/dashboard");
+  return { success: dict.users.saved };
+}
+
+export async function updateDirectoryStudentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requirePermission("manage_users_and_roles");
+  const dict = getDictionary(await getLocale());
+  const id = field(formData, "id");
+  const email = field(formData, "email").toLowerCase();
+  const firstName = field(formData, "firstName");
+  const lastName = field(formData, "lastName");
+  const nationalId = optional(formData, "nationalId");
+  const password = String(formData.get("password") ?? "").trim();
+  if (!id || !isEmail(email) || !firstName || !lastName) return { error: dict.errors.invalid };
+  if (nationalId && !isNationalId(nationalId)) return { error: dict.errors.invalid };
+  if (password && password.length < 8) return { error: dict.errors.invalid };
+
+  const db = getPrisma();
+  const student = await db.user.findFirst({
+    where: { id, roles: { some: { role: { slug: "student" } } } },
+    select: { id: true },
+  });
+  if (!student) return { error: dict.errors.invalid };
+
+  try {
+    await db.user.update({
+      where: { id },
+      data: {
+        email,
+        firstName,
+        lastName,
+        nameAr: optional(formData, "nameAr"),
+        nameHe: `${firstName} ${lastName}`.trim(),
+        phone: optional(formData, "phone"),
+        ...(password ? { passwordHash: await hashPassword(password), loginPassword: password } : {}),
+      },
+    });
+    await db.studentProfile.upsert({
+      where: { userId: id },
+      create: {
+        userId: id,
+        nationalId,
+        nameAr: optional(formData, "nameAr"),
+        academicTrack: optional(formData, "academicTrack"),
+        cohort: ACTIVE_COHORT,
+      },
+      update: {
+        nationalId,
+        nameAr: optional(formData, "nameAr"),
+        academicTrack: optional(formData, "academicTrack"),
+      },
+    });
+  } catch (error) {
+    if (isUniqueConflict(error)) return { error: dict.users.emailTaken };
+    return { error: dict.errors.generic };
+  }
+  revalidatePath("/students");
+  revalidatePath(`/students/${id}`);
+  revalidatePath("/users");
+  revalidatePath("/courses");
+  return { success: dict.users.saved };
+}
+
+export async function deleteDirectoryStudentAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const session = await requirePermission("manage_users_and_roles");
+  const dict = getDictionary(await getLocale());
+  const id = field(formData, "id");
+  if (!id) return { error: dict.errors.invalid };
+  if (id === session.id) return { error: dict.users.cannotDeleteSelf };
+  const db = getPrisma();
+  const student = await db.user.findFirst({
+    where: { id, roles: { some: { role: { slug: "student" } } } },
+    select: { id: true },
+  });
+  if (!student) return { error: dict.errors.invalid };
+  try {
+    await db.user.delete({ where: { id } });
+  } catch {
+    return { error: dict.errors.generic };
+  }
+  revalidatePath("/students");
+  revalidatePath("/users");
+  revalidatePath("/courses");
+  revalidatePath("/attendance");
+  revalidatePath("/stipends");
+  revalidatePath("/sessions");
+  revalidatePath("/dashboard");
   return { success: dict.users.saved };
 }
 

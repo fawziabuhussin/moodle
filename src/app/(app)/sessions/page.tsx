@@ -24,7 +24,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: Pro
   const preselect = (await searchParams).studentId ?? "";
   const db = getPrisma();
   const sessions = await db.privateSession.findMany({
-    where: manager ? {} : { studentId: session.id },
+    where: manager ? { student: { isActive: true } } : { studentId: session.id },
     include: { student: true, staff: true },
     orderBy: { scheduledAt: "desc" },
   });

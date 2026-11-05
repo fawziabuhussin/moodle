@@ -9,9 +9,10 @@ import { Ltr } from "@/components/ltr";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
+import { ACTIVE_COHORT } from "@/lib/cohort";
 import { cn, fullName, initials } from "@/lib/utils";
 import { AccountEditor } from "@/components/students/account-editor";
-import { createUserAction } from "@/server/actions/people";
+import { createUserAction, deleteDirectoryStudentAction, setUserActiveAction, updateDirectoryStudentAction } from "@/server/actions/people";
 import { ensureStudentStipendAction } from "@/server/actions/finance";
 
 export type DirectoryStudent = {
@@ -39,6 +40,7 @@ export type DirectoryStudent = {
   volunteering?: string | null;
   city?: string | null;
   psychometry?: string | null;
+  active: boolean;
 };
 
 export type DirectoryLabels = {
@@ -88,6 +90,14 @@ export type DirectoryLabels = {
   activeYear: string;
   archiveYear: string;
   archiveNote: string;
+  status: string;
+  active: string;
+  inactive: string;
+  edit: string;
+  remove: string;
+  confirmDelete: string;
+  nameAr: string;
+  passwordHint: string;
   statuses: Record<"PENDING" | "APPROVED" | "PAID" | "CANCELLED", string>;
 };
 
@@ -116,6 +126,7 @@ export function StudentsDirectory({
   activeCount,
   archiveCount,
   canAdd,
+  canManage,
   canLog,
   canStipend,
   labels,
@@ -128,6 +139,7 @@ export function StudentsDirectory({
   activeCount: number;
   archiveCount: number;
   canAdd: boolean;
+  canManage: boolean;
   canLog: boolean;
   canStipend: boolean;
   labels: DirectoryLabels;
@@ -142,6 +154,10 @@ export function StudentsDirectory({
   const [stipendFor, setStipendFor] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [profile, setProfile] = useState<DirectoryStudent | null>(null);
+  const [editing, setEditing] = useState<DirectoryStudent | null>(null);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const visible = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -172,6 +188,53 @@ export function StudentsDirectory({
       notify(result.error);
       return;
     }
+    notify(labels.saved);
+    router.refresh();
+  }
+
+  async function toggleActive(student: DirectoryStudent) {
+    if (!canManage) return;
+    setBusyId(student.id);
+    const data = new FormData();
+    data.set("id", student.id);
+    data.set("isActive", student.active ? "0" : "1");
+    const result = await setUserActiveAction(null, data);
+    setBusyId(null);
+    if (result?.error) {
+      notify(result.error);
+      return;
+    }
+    notify(labels.saved);
+    router.refresh();
+  }
+
+  async function saveStudent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingEdit(true);
+    setEditError(null);
+    const result = await updateDirectoryStudentAction(null, new FormData(event.currentTarget));
+    setSavingEdit(false);
+    if (result?.error) {
+      setEditError(result.error);
+      return;
+    }
+    setEditing(null);
+    notify(labels.saved);
+    router.refresh();
+  }
+
+  async function removeStudent(student: DirectoryStudent) {
+    if (!canManage || !window.confirm(labels.confirmDelete)) return;
+    setBusyId(student.id);
+    const data = new FormData();
+    data.set("id", student.id);
+    const result = await deleteDirectoryStudentAction(null, data);
+    setBusyId(null);
+    if (result?.error) {
+      notify(result.error);
+      return;
+    }
+    if (profile?.id === student.id) setProfile(null);
     notify(labels.saved);
     router.refresh();
   }
@@ -260,6 +323,7 @@ export function StudentsDirectory({
               <th className="px-3 text-start font-medium">{labels.track}</th>
               <th className="px-3 text-start font-medium">{labels.attendance}</th>
               <th className="px-3 text-start font-medium">{labels.thisMonth}</th>
+              <th className="px-3 text-start font-medium">{labels.status}</th>
               <th className="px-3 text-end font-medium">{labels.actions}</th>
             </tr>
           </thead>
@@ -267,8 +331,8 @@ export function StudentsDirectory({
             {visible.map((student) => {
               const tone = rateTone(student.attendancePercent);
               return (
-                <tr key={student.id} className="h-14 border-t border-slate-100">
-                  <td className="sticky start-0 z-10 border-e border-slate-200 bg-white px-3">
+                <tr key={student.id} className={cn("h-14 border-t border-slate-100", !student.active && "bg-slate-50 text-slate-500")}>
+                  <td className={cn("sticky start-0 z-10 border-e border-slate-200 px-3", student.active ? "bg-white" : "bg-slate-50")}>
                     <button type="button" onClick={() => setProfile(student)} className="flex min-w-0 items-center gap-2 text-start">
                       <span className="grid size-8 shrink-0 place-items-center rounded-full bg-sky-100 text-xs font-semibold text-sky-800">{initials(student)}</span>
                       <span className="min-w-0">
@@ -297,10 +361,32 @@ export function StudentsDirectory({
                       <span className="text-xs text-muted-foreground">{labels.noStipend}</span>
                     )}
                   </td>
-                  <td className="px-3 text-end">
-                    <button type="button" onClick={() => setProfile(student)} className="rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-sky-50">
-                      {labels.openProfile}
+                  <td className="px-3">
+                    <button
+                      type="button"
+                      disabled={!canManage || busyId === student.id}
+                      onClick={() => toggleActive(student)}
+                      className={cn("rounded-full px-2 py-0.5 text-xs font-medium disabled:opacity-50", student.active ? "bg-lime-100 text-lime-800" : "bg-slate-200 text-slate-600")}
+                    >
+                      {student.active ? labels.active : labels.inactive}
                     </button>
+                  </td>
+                  <td className="px-3 text-end">
+                    <div className="flex flex-wrap justify-end gap-1">
+                      <button type="button" onClick={() => setProfile(student)} className="rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-sky-50">
+                        {labels.openProfile}
+                      </button>
+                      {canManage ? (
+                        <>
+                          <button type="button" onClick={() => { setEditError(null); setEditing(student); }} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
+                            {labels.edit}
+                          </button>
+                          <button type="button" disabled={busyId === student.id} onClick={() => removeStudent(student)} className="rounded-lg px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                            {labels.remove}
+                          </button>
+                        </>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );
@@ -365,11 +451,44 @@ export function StudentsDirectory({
                       confirmationLabel={labels.bankYes}
                     />
                   ) : null}
-                  {canLog ? <Button asChild variant="outline"><Link href={`/sessions?studentId=${profile.id}`}>{labels.logSession}</Link></Button> : null}
-                  {canStipend ? (
+                  {canLog && profile.active ? <Button asChild variant="outline"><Link href={`/sessions?studentId=${profile.id}`}>{labels.logSession}</Link></Button> : null}
+                  {canStipend && profile.active ? (
                     <Button type="button" variant="outline" disabled={stipendFor === profile.id} onClick={() => addStipend(profile.id)}>{labels.addStipend}</Button>
                   ) : null}
                 </div>
+              </>
+            ) : null}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <Dialog.Root open={editing != null} onOpenChange={(next) => { if (!next) setEditing(null); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full max-w-[100vw] overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl outline-none md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:pb-4">
+            {editing ? (
+              <>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <Dialog.Title className="text-base font-semibold">{labels.edit}</Dialog.Title>
+                  <Dialog.Close className="rounded-lg p-1 text-slate-500 hover:bg-slate-100" aria-label={labels.close}>
+                    <X className="size-4" />
+                  </Dialog.Close>
+                </div>
+                <form onSubmit={saveStudent} className="grid gap-2">
+                  <input type="hidden" name="id" value={editing.id} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input name="firstName" placeholder={labels.firstName} defaultValue={editing.firstName} required />
+                    <Input name="lastName" placeholder={labels.lastName} defaultValue={editing.lastName} required />
+                  </div>
+                  <Input name="nameAr" placeholder={labels.nameAr} defaultValue={editing.nameAr ?? ""} />
+                  <Input name="email" type="email" placeholder={labels.email} defaultValue={editing.email ?? ""} required />
+                  <Input name="phone" placeholder={labels.phone} defaultValue={editing.phone ?? ""} />
+                  <Input name="nationalId" placeholder={labels.nationalId} defaultValue={editing.nationalId ?? ""} dir="ltr" />
+                  <Input name="academicTrack" placeholder={labels.track} defaultValue={editing.track ?? ""} />
+                  <Input name="password" type="password" placeholder={labels.passwordHint} minLength={8} />
+                  {editError ? <p className="text-sm text-rose-700">{editError}</p> : null}
+                  <Button type="submit" disabled={savingEdit}>{savingEdit ? labels.saving : labels.edit}</Button>
+                </form>
               </>
             ) : null}
           </Dialog.Content>
@@ -388,6 +507,7 @@ export function StudentsDirectory({
             </div>
             <form key={formKey} onSubmit={createStudent} className="grid gap-2">
               <input type="hidden" name="roleIds" value={studentRoleId ?? ""} />
+              <input type="hidden" name="cohort" value={ACTIVE_COHORT} />
               <div className="grid grid-cols-2 gap-2">
                 <Input name="firstName" placeholder={labels.firstName} required />
                 <Input name="lastName" placeholder={labels.lastName} required />
