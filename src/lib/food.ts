@@ -21,6 +21,26 @@ export function foodOrderLine(name: string, item: string, additions: string[], n
   return `${name} - ${details.join(", ")}`;
 }
 
+export function foodClipboard(
+  orders: { name: string; item: string; additions: string[]; notes?: string | null; sortOrder?: number }[],
+  missing: string[],
+) {
+  const groups = new Map<string, { sort: number; lines: string[] }>();
+  for (const order of orders) {
+    const key = arabicLabel(order.item);
+    const group = groups.get(key) ?? { sort: order.sortOrder ?? groups.size, lines: [] };
+    group.lines.push(foodOrderLine(order.name, order.item, order.additions, order.notes));
+    groups.set(key, group);
+  }
+  const lines = [...groups.values()]
+    .sort((a, b) => a.sort - b.sort || a.lines[0].localeCompare(b.lines[0], "ar"))
+    .flatMap((group) => group.lines);
+  const waiting = [...new Set(missing.map((name) => name.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ar"));
+  if (lines.length === 0 && waiting.length === 0) return "";
+  if (waiting.length === 0) return lines.join("\n");
+  return [...lines, "------------", ...waiting].join("\n");
+}
+
 export function pollIsOpen(status: string, closesAt: Date, now = new Date()) {
   return status === "OPEN" && closesAt.getTime() > now.getTime();
 }

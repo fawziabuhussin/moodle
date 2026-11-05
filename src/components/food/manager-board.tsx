@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { closeFoodPollAction, extendFoodPollAction, openFoodPollAction, saveFoodMenuAction } from "@/server/actions/food";
 
 type SavedMenu = { id: string; name: string; text: string };
-type HistoryEntry = { id: string; when: string; menuName: string; price: string | null; count: number; lines: string[] };
+type HistoryEntry = { id: string; when: string; menuName: string; price: string | null; count: number; clipboard: string };
 
 export type FoodLabels = {
   openPoll: string;
@@ -40,14 +40,14 @@ export function ManagerBoard({
   restaurantId,
   menus,
   history,
-  lines,
+  clipboard,
   labels,
 }: {
   poll: { id: string; status: "OPEN" | "CLOSED"; closesAt: string; restaurantName: string; logoIcon: string; price: string | null } | null;
   restaurantId: string;
   menus: SavedMenu[];
   history: HistoryEntry[];
-  lines: string[];
+  clipboard: string;
   labels: FoodLabels;
 }) {
   const router = useRouter();
@@ -73,7 +73,7 @@ export function ManagerBoard({
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);
   const clock = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-  const text = lines.join("\n");
+  const text = clipboard;
 
   function run(action: () => Promise<{ error?: string; success?: string } | null | undefined>) {
     startTransition(async () => {
@@ -159,12 +159,12 @@ export function ManagerBoard({
       <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{labels.orders}</h2>
-          <Button type="button" onClick={copyOrders} disabled={lines.length === 0} className="h-14 bg-emerald-600 px-5 text-base hover:bg-emerald-700">
+          <Button type="button" onClick={copyOrders} disabled={text.trim().length === 0} className="h-14 bg-emerald-600 px-5 text-base hover:bg-emerald-700">
             {copied ? labels.copied : labels.copy}
           </Button>
         </div>
-        {lines.length === 0 ? <p className="text-sm text-slate-500">{poll ? labels.noOrders : labels.noPoll}</p> : null}
-        <pre className={cn("whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-900", lines.length === 0 && "hidden")} dir="rtl">
+        {text.trim().length === 0 ? <p className="text-sm text-slate-500">{poll ? labels.noOrders : labels.noPoll}</p> : null}
+        <pre className={cn("whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-900", text.trim().length === 0 && "hidden")} dir="rtl">
           {text}
         </pre>
       </section>
@@ -261,8 +261,8 @@ function History({ entries, labels }: { entries: HistoryEntry[]; labels: FoodLab
               </span>
             </summary>
             <div className="grid gap-2 px-3 pb-3">
-              <pre className="whitespace-pre-wrap text-sm leading-7 text-slate-800" dir="rtl">{entry.lines.join("\n") || labels.noOrders}</pre>
-              <Button type="button" variant="outline" disabled={entry.lines.length === 0} onClick={() => copy(entry.id, entry.lines.join("\n"))}>
+              <pre className="whitespace-pre-wrap text-sm leading-7 text-slate-800" dir="rtl">{entry.clipboard || labels.noOrders}</pre>
+              <Button type="button" variant="outline" disabled={entry.clipboard.trim().length === 0} onClick={() => copy(entry.id, entry.clipboard)}>
                 {copied === entry.id ? labels.copied : labels.copy}
               </Button>
             </div>
