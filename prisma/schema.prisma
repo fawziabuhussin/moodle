@@ -1,0 +1,508 @@
+// Entilaka Moodle
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum DevicePlatform {
+  IOS
+  ANDROID
+  WEB
+}
+
+enum AttendanceStatus {
+  ATTENDED
+  LATE
+  ABSENT
+  EXCUSED
+}
+
+enum AttendanceSource {
+  MANUAL
+  TERMINAL_MACHINE
+  KIOSK
+}
+
+enum StipendStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+}
+
+enum PrivateSessionStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum NotificationPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+enum NotificationAudience {
+  ALL_USERS
+  ALL_STUDENTS
+  ALL_TEACHERS
+  COURSE
+  INDIVIDUAL
+  SYSTEM
+}
+
+enum PushDeliveryStatus {
+  PENDING
+  SENT
+  SKIPPED
+  FAILED
+}
+
+enum DriveKind {
+  SHEET
+  DOC
+  FORM_LINK
+  PDF_UPLOAD
+}
+
+enum DriveCohort {
+  COHORT_2026_2027
+  COHORT_2025_2026
+  GENERAL
+}
+
+enum DriveVisibility {
+  STAFF
+  SHARED
+}
+
+enum ScheduleCategory {
+  PSYCHOMETRY
+  PYTHON_AI
+  HEBREW_YAEL
+  VOLUNTEERING
+  IDENTITY_LEADERSHIP
+  WORKSHOP
+  FOOD_BREAK
+  EXAM
+  GENERAL
+}
+
+enum RecurrenceType {
+  WEEKLY
+  BIWEEKLY
+  ONCE
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  passwordHash    String
+  firstName       String
+  lastName        String
+  phone           String?
+  locale          String   @default("he")
+  isActive        Boolean  @default(true)
+  hardwareBadgeId String?  @unique
+  terminalPin     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  roles                UserRole[]
+  studentProfile       StudentProfile?
+  authSessions         AuthSession[]
+  taughtCourses        CourseTeacher[]
+  enrollments          CourseEnrollment[]
+  attendanceRecords    AttendanceRecord[]
+  recordedAttendance   AttendanceRecord[] @relation("AttendanceRecorder")
+  stipendPayments      StipendPayment[]
+  studentSessions      PrivateSession[]   @relation("SessionStudent")
+  staffSessions        PrivateSession[]   @relation("SessionStaff")
+  coursePosts          CoursePost[]
+  postComments         CoursePostComment[]
+  examsCreated         Exam[]             @relation("ExamAuthor")
+  examGrades           ExamGrade[]
+  gradesRecorded       ExamGrade[]        @relation("GradeRecorder")
+  notificationsCreated Notification[]     @relation("NotificationAuthor")
+  weekPlanItems        WeekPlanItem[]     @relation("WeekPlanAuthor")
+  userNotifications    UserNotification[]
+  deviceTokens         UserDeviceToken[]
+  driveFiles           DriveFile[]
+
+  @@index([isActive])
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  userAgent String?
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  permissions String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       UserRole[]
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model StudentProfile {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nationalId            String?
+  dateOfBirth           DateTime?
+  gender                String?
+  address               String?
+  city                  String?
+  academicTrack         String?
+  bio                   String?
+  defaultStipendAmount  Decimal   @default(0) @db.Decimal(10, 2)
+  bankName              String?
+  bankBranch            String?
+  bankAccountNumber     String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  notes                 String?
+  nameAr                String?
+  cohort                String?
+  psychometryTrack      String?
+  volunteeringPlace     String?
+  stipendApproval       String?
+  hasBankConfirmation   Boolean   @default(false)
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([nationalId])
+  @@index([cohort])
+}
+
+model AttendanceSetting {
+  id                String   @id @default(cuid())
+  scopeKey          String   @unique
+  courseId          String?  @unique
+  course            Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  isGlobal          Boolean  @default(false)
+  officialStartTime String   @default("16:00")
+  lateGraceMinutes  Int      @default(0)
+  autoCheckoutTime  String?
+  updatedAt         DateTime @updatedAt
+}
+
+model AttendanceRecord {
+  id           String           @id @default(cuid())
+  userId       String
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId     String?
+  course       Course?          @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  courseScope  String           @default("none")
+  date         DateTime         @db.Date
+  status       AttendanceStatus
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  minutesLate  Int?
+  totalMinutes Int?
+  source       AttendanceSource @default(MANUAL)
+  notes        String?
+  recordedById String?
+  recordedBy   User?            @relation("AttendanceRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([userId, date, courseScope])
+  @@index([date])
+  @@index([courseId])
+}
+
+model StipendPayment {
+  id                String        @id @default(cuid())
+  studentId         String
+  student           User          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  month             Int
+  year              Int
+  baseAmount        Decimal       @db.Decimal(10, 2)
+  deductionAmount   Decimal       @default(0) @db.Decimal(10, 2)
+  bonusAmount       Decimal       @default(0) @db.Decimal(10, 2)
+  finalAmount       Decimal       @db.Decimal(10, 2)
+  status            StipendStatus @default(PENDING)
+  paidAt            DateTime?
+  notes             String?
+  absenceCount      Int           @default(0)
+  lateCount         Int           @default(0)
+  attendancePercent Decimal?      @db.Decimal(5, 2)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@unique([studentId, month, year])
+  @@index([year, month])
+}
+
+model PrivateSession {
+  id                     String               @id @default(cuid())
+  studentId              String
+  student                User                 @relation("SessionStudent", fields: [studentId], references: [id], onDelete: Cascade)
+  staffId                String
+  staff                  User                 @relation("SessionStaff", fields: [staffId], references: [id], onDelete: Cascade)
+  title                  String
+  scheduledAt            DateTime
+  durationMinutes        Int                  @default(45)
+  locationOrLink         String?
+  status                 PrivateSessionStatus @default(SCHEDULED)
+  agenda                 String?
+  studentVisibleNotes    String?
+  confidentialStaffNotes String?
+  actionItems            String?
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+
+  @@index([studentId, scheduledAt])
+  @@index([staffId, scheduledAt])
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  title       String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teachers          CourseTeacher[]
+  enrollments       CourseEnrollment[]
+  posts             CoursePost[]
+  exams             Exam[]
+  attendanceSetting AttendanceSetting?
+  attendanceRecords AttendanceRecord[]
+  notifications     Notification[]
+  weekPlanItems     WeekPlanItem[]
+}
+
+model CourseTeacher {
+  courseId   String
+  userId     String
+  assignedAt DateTime @default(now())
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, userId])
+}
+
+model CourseEnrollment {
+  courseId   String
+  userId     String
+  enrolledAt DateTime @default(now())
+  course     Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([courseId, userId])
+}
+
+model CoursePost {
+  id            String   @id @default(cuid())
+  courseId      String
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  authorId      String
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title         String?
+  body          String
+  linkUrl       String?
+  isPinned      Boolean  @default(false)
+  allowComments Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  comments      CoursePostComment[]
+
+  @@index([courseId, createdAt])
+}
+
+model CoursePostComment {
+  id        String     @id @default(cuid())
+  postId    String
+  post      CoursePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime   @default(now())
+
+  @@index([postId])
+}
+
+model Exam {
+  id          String   @id @default(cuid())
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  examDate    DateTime
+  maxScore    Decimal  @default(100) @db.Decimal(6, 2)
+  attachments String[]
+  createdById String
+  createdBy   User     @relation("ExamAuthor", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  grades      ExamGrade[]
+
+  @@index([courseId, examDate])
+}
+
+model ExamGrade {
+  id           String   @id @default(cuid())
+  examId       String
+  exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      User     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  score        Decimal? @db.Decimal(6, 2)
+  feedback     String?
+  recordedById String?
+  recordedBy   User?    @relation("GradeRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([examId, studentId])
+}
+
+model Notification {
+  id          String               @id @default(cuid())
+  title       String
+  body        String
+  priority    NotificationPriority @default(NORMAL)
+  audience    NotificationAudience
+  courseId    String?
+  course      Course?              @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  linkUrl     String?
+  isPinned    Boolean              @default(false)
+  createdById String?
+  createdBy   User?                @relation("NotificationAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime             @default(now())
+  recipients  UserNotification[]
+
+  @@index([createdAt])
+}
+
+model UserNotification {
+  id               String             @id @default(cuid())
+  notificationId   String
+  notification     Notification       @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt           DateTime?
+  pushStatus       PushDeliveryStatus @default(PENDING)
+  pushDispatchedAt DateTime?
+  pushError        String?
+  createdAt        DateTime           @default(now())
+
+  @@unique([notificationId, userId])
+  @@index([userId, readAt])
+}
+
+model UserDeviceToken {
+  id           String         @id @default(cuid())
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform     DevicePlatform
+  pushToken    String
+  deviceName   String?
+  lastActiveAt DateTime       @default(now())
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([userId, pushToken])
+  @@index([platform])
+}
+
+model WeekPlanItem {
+  id             String           @id @default(cuid())
+  seedKey        String?          @unique
+  titleHe        String
+  titleAr        String
+  courseId       String?
+  course         Course?          @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  category       ScheduleCategory
+  dayOfWeek      Int
+  startTime      String
+  endTime        String
+  roomOrLocation String?
+  instructorName String?
+  recurrenceType RecurrenceType   @default(WEEKLY)
+  startDate      DateTime
+  endDate        DateTime?
+  isActive       Boolean          @default(true)
+  createdById    String?
+  createdBy      User?            @relation("WeekPlanAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([dayOfWeek, isActive])
+  @@index([courseId])
+}
+
+model DriveFolder {
+  id         String           @id @default(cuid())
+  name       String
+  slug       String           @unique
+  parentId   String?
+  parent     DriveFolder?     @relation("DriveTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children   DriveFolder[]    @relation("DriveTree")
+  files      DriveFile[]
+  cohort     DriveCohort      @default(GENERAL)
+  visibility DriveVisibility  @default(STAFF)
+  sortOrder  Int              @default(0)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([parentId])
+}
+
+model DriveFile {
+  id         String           @id @default(cuid())
+  name       String
+  slug       String           @unique
+  folderId   String
+  folder     DriveFolder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  kind       DriveKind
+  cohort     DriveCohort      @default(GENERAL)
+  visibility DriveVisibility  @default(STAFF)
+  columns    Json?
+  rows       Json?
+  body       String?
+  linkUrl    String?
+  syncKey    String?
+  studentId  String?
+  student    User?            @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  sortOrder  Int              @default(0)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([folderId])
+  @@index([studentId])
+  @@index([syncKey])
+}

@@ -1,26 +1,127 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --navy: #0f172a;
+  --primary: #0284c7;
+  --primary-foreground: #ffffff;
+  --primary-bright: #0ea5e9;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #0f172a;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #e0f2fe;
+  --accent-foreground: #075985;
+  --destructive: #e11d48;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
+  --ring: #0284c7;
+  --radius: 0.9rem;
+  --brand-green: #65a30d;
+  --brand-orange: #f97316;
+  --brand-gold: #d97706;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-bright: var(--primary-bright);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: var(--font-heebo), var(--font-inter), sans-serif;
+  --color-navy: var(--navy);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html[lang="he"] body {
+  font-family: var(--font-heebo), var(--font-inter), sans-serif;
+}
+
+html[lang="ar"] body {
+  font-family: var(--font-cairo), var(--font-almarai), sans-serif;
+}
+
+html[lang="en"] body {
+  font-family: var(--font-inter), var(--font-heebo), sans-serif;
+}
+
+html[lang="ar"] h1,
+html[lang="ar"] h2,
+html[lang="ar"] h3 {
+  font-family: var(--font-almarai), var(--font-cairo), sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+.font-arabic {
+  font-family: var(--font-almarai), var(--font-cairo), sans-serif;
+}
+
+bdi[dir="ltr"],
+.tabular-nums {
+  font-family: var(--font-inter), var(--font-heebo), sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+@keyframes entilaka-drawer {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes entilaka-drawer-rtl {
+  from { transform: translate3d(100%, 0, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+.entilaka-drawer {
+  animation: entilaka-drawer 220ms ease-out;
+}
+
+[dir="rtl"] .entilaka-drawer {
+  animation-name: entilaka-drawer-rtl;
+}
+
+input,
+select,
+textarea,
+button {
+  font: inherit;
+}
+
+input[type="time"],
+input[type="datetime-local"],
+input[type="date"],
+input[type="month"],
+input[type="number"],
+input[type="tel"] {
+  direction: ltr;
+  font-family: var(--font-inter), var(--font-heebo), sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
