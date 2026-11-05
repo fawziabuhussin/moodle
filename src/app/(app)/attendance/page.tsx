@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AttendanceBoard } from "@/components/attendance/board";
+import { SyncAttendanceButton } from "@/components/attendance/sync-button";
 import { Ltr } from "@/components/ltr";
 import { PageHeader } from "@/components/page-header";
 import { getAttendanceSetting } from "@/lib/attendance";
@@ -42,7 +43,11 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
 
   return (
     <div>
-      <PageHeader title={dict.attendance.title} description={dict.attendance.subtitle} />
+      <PageHeader
+        title={dict.attendance.title}
+        description={dict.attendance.subtitle}
+        action={<SyncAttendanceButton label={dict.attendance.sync} pendingLabel={dict.attendance.syncing} />}
+      />
       <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
         <span>{dict.attendance.machine}</span>
         <Ltr>{setting?.officialStartTime ?? "16:00"}</Ltr>

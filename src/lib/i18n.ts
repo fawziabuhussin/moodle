@@ -14,6 +14,7 @@ const he = {
     demoStudent: "תלמיד: דוא״ל או תעודת זהות, והסיסמה הראשונית היא תעודת הזהות.",
     quick: "כניסה מהירה",
     invalid: "הפרטים או הסיסמה אינם נכונים.",
+    privacy: "מדיניות פרטיות",
   },
   nav: {
     dashboard: "לוח בקרה / الرئيسية",
@@ -135,6 +136,11 @@ const he = {
     previous: "אתמול",
     today: "היום",
     next: "הבא",
+    sync: "סנכרון טופס הנוכחות",
+    syncing: "מסנכרן...",
+    synced: "סונכרנו {records} סימונים ב-{days} ימים",
+    syncFailed: "סנכרון טופס הנוכחות נכשל",
+    unmatched: "לא הותאמו: {names}",
   },
   settings: {
     title: "הגדרות נוכחות",
@@ -482,6 +488,7 @@ const ar: Dictionary = {
     demoStudent: "طالب: البريد أو رقم الهوية، وكلمة السر الأولى هي رقم الهوية.",
     quick: "دخول سريع",
     invalid: "البيانات أو كلمة السر غير صحيحة.",
+    privacy: "سياسة الخصوصية",
   },
   nav: {
     dashboard: "الرئيسية / לוח בקרה",
@@ -603,6 +610,11 @@ const ar: Dictionary = {
     previous: "السابق",
     today: "اليوم",
     next: "التالي",
+    sync: "مزامنة استمارة الحضور",
+    syncing: "جارٍ المزامنة...",
+    synced: "تمت مزامنة {records} علامات في {days} أيام",
+    syncFailed: "تعذّرت مزامنة استمارة الحضور",
+    unmatched: "لم تُطابق: {names}",
   },
   settings: {
     title: "إعدادات الحضور",
@@ -948,6 +960,7 @@ const en: Dictionary = {
     demoStudent: "Student: email or national ID. The first password is the national ID.",
     quick: "Quick sign-in",
     invalid: "The details or password are incorrect.",
+    privacy: "Privacy policy",
   },
   nav: {
     dashboard: "Dashboard",
@@ -1069,6 +1082,11 @@ const en: Dictionary = {
     previous: "Yesterday",
     today: "Today",
     next: "Next",
+    sync: "Sync attendance form",
+    syncing: "Syncing...",
+    synced: "Synced {records} marks across {days} days",
+    syncFailed: "The attendance form could not be synced",
+    unmatched: "Unmatched: {names}",
   },
   settings: {
     title: "Attendance settings",

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { AttendanceStatus } from "@prisma/client";
 import { recordTerminalTap, resolveArrivalStatus } from "@/lib/attendance";
+import { syncAttendanceSheet } from "@/server/attendance-sheet";
 import { activeStudentWhere } from "@/lib/cohort";
 import { getLocale, requirePermission } from "@/lib/auth";
 import { field, optional } from "@/lib/form";
@@ -252,4 +253,20 @@ export async function simulateTerminalAction(_prev: ActionState, formData: FormD
   const name = `${result.student.firstName} ${result.student.lastName}`;
   const label = result.action === "CHECK_IN" ? dict.terminal.checkIn : dict.terminal.checkOut;
   return { success: `${label}: ${name} · ${dict.status[result.record.status]}` };
+}
+
+export async function syncAttendanceSheetAction(): Promise<ActionState> {
+  const session = await requirePermission("manage_attendance");
+  const dict = getDictionary(await getLocale());
+  try {
+    const plan = await syncAttendanceSheet(getPrisma(), session.id);
+    revalidatePath("/attendance");
+    revalidatePath("/dashboard");
+    revalidatePath("/student-board");
+    const summary = dict.attendance.synced.replace("{records}", String(plan.records.length)).replace("{days}", String(plan.days.length));
+    const skipped = [...plan.unmatched, ...plan.ambiguous];
+    return { success: skipped.length ? `${summary} · ${dict.attendance.unmatched.replace("{names}", skipped.join(", "))}` : summary };
+  } catch {
+    return { error: dict.attendance.syncFailed };
+  }
 }

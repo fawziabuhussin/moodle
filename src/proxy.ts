@@ -2,7 +2,7 @@ import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 import { TOKEN_COOKIE } from "@/lib/constants";
 
-const PUBLIC_PATHS = new Set(["/login"]);
+const PUBLIC_PATHS = new Set(["/login", "/privacy"]);
 
 async function tokenIsSigned(token: string) {
   const secret = process.env.AUTH_SECRET;

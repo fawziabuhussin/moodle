@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BrandLogo, BrandMark } from "@/components/brand";
 import { LoginForm } from "@/components/login-form";
 import { getLocale } from "@/lib/auth";
@@ -53,6 +54,9 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
               quickLabel={dict.login.quick}
             />
           </div>
+          <p className="mt-6 text-center text-xs text-slate-500">
+            <Link href="/privacy" className="underline-offset-2 hover:underline">{dict.login.privacy}</Link>
+          </p>
         </div>
       </section>
 

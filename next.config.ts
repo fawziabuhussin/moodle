@@ -4,6 +4,14 @@ import { fileURLToPath } from "node:url";
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
+  async headers() {
+    return [
+      {
+        source: "/.well-known/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+    ];
+  },
   serverExternalPackages: [
     "@prisma/client",
     "@prisma/adapter-neon",
