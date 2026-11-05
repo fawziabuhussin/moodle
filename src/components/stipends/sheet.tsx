@@ -301,6 +301,26 @@ export function StipendSheet({
     return Math.max(0, amount - row.deduction + row.bonus);
   }
 
+  function accountEditor(row: MonthRow) {
+    if (!row.account || !labels.editAccount || !labels.resetPassword || !labels.save || !labels.savingAccount || !labels.close || !labels.email || !labels.phone || !labels.bank || !labels.branch || !labels.accountNumber || !labels.confirmation) return null;
+    return (
+      <AccountEditor
+        account={row.account}
+        editLabel={labels.editAccount}
+        resetLabel={labels.resetPassword}
+        saveLabel={labels.save}
+        savingLabel={labels.savingAccount}
+        closeLabel={labels.close}
+        emailLabel={labels.email}
+        phoneLabel={labels.phone}
+        bankLabel={labels.bank}
+        branchLabel={labels.branch}
+        accountLabel={labels.accountNumber}
+        confirmationLabel={labels.confirmation}
+      />
+    );
+  }
+
   const monthTotal = visible.reduce((sum, row) => sum + netOf(row), 0);
   const assigned = summary.reduce((sum, row) => sum + row.assigned, 0);
   const paid = summary.reduce((sum, row) => sum + row.paid, 0);
@@ -340,26 +360,24 @@ export function StipendSheet({
       </div>
       <div className="sticky top-16 z-20 -mx-4 mb-3 flex flex-col gap-2 border-b border-slate-200/80 bg-slate-50/95 px-4 py-2 backdrop-blur md:-mx-8 md:px-8">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <label className="relative min-w-0 flex-1">
+          <label className="relative min-w-0 lg:flex-1">
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.search} className="ps-9" />
           </label>
           {view === "month" ? (
             <>
-              <Input type="month" aria-label={labels.month} value={period} onChange={(event) => router.push(`/stipends?period=${event.target.value}`)} className="lg:w-44" />
-              <Input type="number" min={0} step="0.01" value={example} onChange={(event) => setExample(event.target.value)} placeholder={labels.example} aria-label={labels.example} className="lg:w-36" />
-              <Button type="button" variant="outline" disabled={busy === "apply" || selected.size === 0 || example.trim() === ""} onClick={applyExample}>{labels.apply}</Button>
-              <Button type="button" onClick={approveSelected} disabled={busy === "bulk" || selected.size === 0}>{labels.bulkApprove}</Button>
-              <Button type="button" variant="outline" onClick={paySelected} disabled={busy === "pay" || selected.size === 0}>{labels.bulkPay}</Button>
+              <div className="grid grid-cols-2 gap-2 lg:flex">
+                <Input type="month" aria-label={labels.month} value={period} onChange={(event) => router.push(`/stipends?period=${event.target.value}`)} className="lg:w-44" />
+                <Input type="number" min={0} step="0.01" value={example} onChange={(event) => setExample(event.target.value)} placeholder={labels.example} aria-label={labels.example} className="lg:w-36" />
+              </div>
+              <div className="grid grid-cols-2 gap-1.5 lg:flex">
+                <Button type="button" variant="outline" disabled={busy === "apply" || selected.size === 0 || example.trim() === ""} onClick={applyExample} className="col-span-2 h-9 px-2 text-xs lg:h-10 lg:px-4 lg:text-sm">{labels.apply}</Button>
+                <Button type="button" onClick={approveSelected} disabled={busy === "bulk" || selected.size === 0} className="h-9 px-2 text-xs lg:h-10 lg:px-4 lg:text-sm">{labels.bulkApprove}</Button>
+                <Button type="button" variant="outline" onClick={paySelected} disabled={busy === "pay" || selected.size === 0} className="h-9 px-2 text-xs lg:h-10 lg:px-4 lg:text-sm">{labels.bulkPay}</Button>
+              </div>
             </>
           ) : null}
         </div>
-        {view === "month" ? (
-          <label className="flex items-center gap-2 text-xs text-slate-600">
-            <input ref={allRef} type="checkbox" aria-label={labels.select} onChange={toggleAll} checked={visible.length > 0 && visible.every((row) => selected.has(row.studentId))} className="size-4" />
-            {labels.select}
-          </label>
-        ) : null}
         <p className="text-xs text-slate-500">
           {view === "month" ? labels.formula : null}
           {view === "month" ? <span className="ms-2 font-medium text-slate-700">{labels.monthTotal} <Ltr>{formatMoney(monthTotal, locale)}</Ltr></span> : <span>{labels.totalGiven} <Ltr>{formatMoney(assigned, locale)}</Ltr> · {labels.totalPaid} <Ltr>{formatMoney(paid, locale)}</Ltr> · {labels.waiting} <Ltr>{formatMoney(Math.max(0, assigned - paid), locale)}</Ltr></span>}
@@ -367,7 +385,21 @@ export function StipendSheet({
       </div>
 
       {view === "summary" ? (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <>
+        <ul className="grid gap-2 md:hidden">
+          {visibleSummary.map((row) => (
+            <li key={row.studentId} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <p className="font-medium">{row.name}</p>
+              <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-slate-500">
+                <div><dt>{labels.months}</dt><dd className="font-medium text-slate-900"><Ltr>{row.months}</Ltr></dd></div>
+                <div><dt>{labels.totalGiven}</dt><dd className="font-medium text-slate-900"><Ltr>{formatMoney(row.assigned, locale)}</Ltr></dd></div>
+                <div><dt>{labels.totalPaid}</dt><dd className="font-medium text-slate-900"><Ltr>{formatMoney(row.paid, locale)}</Ltr></dd></div>
+                <div><dt>{labels.waiting}</dt><dd className="font-medium text-slate-900"><Ltr>{formatMoney(Math.max(0, row.assigned - row.paid), locale)}</Ltr></dd></div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
           <table className="w-full min-w-[640px] border-collapse text-sm">
             <thead className="bg-slate-50 text-xs text-slate-500">
               <tr className="h-9">
@@ -392,58 +424,122 @@ export function StipendSheet({
           </table>
           {visibleSummary.length === 0 ? <p className="px-4 py-6 text-sm text-slate-500">{labels.none}</p> : null}
         </div>
+        {visibleSummary.length === 0 ? <p className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500 md:hidden">{labels.none}</p> : null}
+        </>
       ) : (
         <>
-        <ul className="grid gap-2">
-          {visible.map((row) => {
-            const draft = draftOf(row);
-            const status = statusOf(row);
-            const dirty = rowDirty(row);
-            const working = busy === row.studentId || busy === row.id;
-            const net = netOf(row);
-            return (
-              <li key={row.studentId} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <input type="checkbox" checked={selected.has(row.studentId)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(row.studentId)) next.delete(row.studentId); else next.add(row.studentId); return next; })} aria-label={labels.select} className="mt-1 size-4" />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <span className="min-w-0">
-                        <span className="block font-medium">{row.name}</span>
-                        {row.accountLine ? <span className="block truncate text-[11px] text-slate-500"><Ltr>{row.accountLine}</Ltr></span> : null}
-                      </span>
-                      {row.id ? <span className="text-sm font-semibold"><Ltr>{formatMoney(net, locale)}</Ltr></span> : <Badge tone="PENDING">{labels.notPosted}</Badge>}
-                    </div>
-                    {row.account && labels.editAccount && labels.resetPassword && labels.save && labels.savingAccount && labels.close && labels.email && labels.phone && labels.bank && labels.branch && labels.accountNumber && labels.confirmation ? (
-                      <AccountEditor account={row.account} editLabel={labels.editAccount} resetLabel={labels.resetPassword} saveLabel={labels.save} savingLabel={labels.savingAccount} closeLabel={labels.close} emailLabel={labels.email} phoneLabel={labels.phone} bankLabel={labels.bank} branchLabel={labels.branch} accountLabel={labels.accountNumber} confirmationLabel={labels.confirmation} />
-                    ) : null}
-                    <div className="mt-2 grid gap-2 sm:grid-cols-[9rem_1fr_9rem]">
-                      <Input type="number" min={0} step="0.01" value={draft.amount} disabled={working} aria-label={labels.amount} placeholder={labels.amount} className="h-9" onChange={(event) => setDrafts((current) => ({ ...current, [row.studentId]: { notes: draft.notes, amount: event.target.value }}))} />
-                      <Input value={draft.notes} disabled={working} aria-label={labels.notes} placeholder={labels.notes} className="h-9" onChange={(event) => setDrafts((current) => ({ ...current, [row.studentId]: { amount: draft.amount, notes: event.target.value }}))} />
-                      <select aria-label={labels.status} value={status} disabled={working} onChange={(event) => setStatusDrafts((current) => ({ ...current, [row.studentId]: event.target.value as Status }))} className="h-9 rounded-xl border border-input bg-card px-2 text-sm">
-                        {(["PENDING", "APPROVED", "PAID", "CANCELLED"] as const).map((value) => <option key={value} value={value}>{labels.statuses[value]}</option>)}
-                      </select>
-                    </div>
-                    {row.deduction > 0 || row.bonus > 0 ? (
-                      <p className="mt-1 text-xs text-slate-500">
-                        {labels.deduction} <Ltr>{formatMoney(row.deduction, locale)}</Ltr>
-                        {" · "}{labels.bonus} <Ltr>{formatMoney(row.bonus, locale)}</Ltr>
-                        {" · "}{labels.net} <Ltr>{formatMoney(net, locale)}</Ltr>
-                      </p>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      <Button type="button" size="sm" disabled={working || !dirty} onClick={() => persist(row)}>{row.id ? labels.save : labels.post}</Button>
-                      <StipendEditor row={row} period={period} locale={locale} labels={labels} onDone={(message) => { notify(message); router.refresh(); }} />
-                      <Button type="button" size="sm" variant="outline" disabled={!row.id || working || status === "APPROVED" || status === "PAID"} onClick={() => setStatus(row, "APPROVED")}>{labels.approve}</Button>
-                      <Button type="button" size="sm" variant="outline" disabled={!row.id || working || status !== "APPROVED"} onClick={() => setStatus(row, "PAID")}>{labels.paid}</Button>
-                      <Button type="button" size="sm" variant="outline" disabled={!row.id || working} onClick={() => remove(row)}>{labels.remove}</Button>
+          <ul className="grid gap-2 md:hidden">
+            {visible.map((row) => {
+              const draft = draftOf(row);
+              const status = statusOf(row);
+              const dirty = rowDirty(row);
+              const working = busy === row.studentId || busy === row.id;
+              const net = netOf(row);
+              return (
+                <li key={row.studentId} className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                  <div className="flex items-start gap-2">
+                    <input type="checkbox" checked={selected.has(row.studentId)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(row.studentId)) next.delete(row.studentId); else next.add(row.studentId); return next; })} aria-label={labels.select} className="mt-1 size-4 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="font-medium leading-5">{row.name}</span>
+                        {row.id ? <Ltr className="shrink-0 text-sm font-semibold">{formatMoney(net, locale)}</Ltr> : <Badge tone="PENDING">{labels.notPosted}</Badge>}
+                      </div>
+                      {row.accountLine ? <p className="truncate text-[11px] text-slate-500"><Ltr>{row.accountLine}</Ltr></p> : null}
                     </div>
                   </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-        {visible.length === 0 ? <p className="rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">{needle ? labels.noMatches : labels.none}</p> : null}
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <Input type="number" min={0} step="0.01" value={draft.amount} disabled={working} aria-label={labels.amount} placeholder={labels.amount} className="h-10" onChange={(event) => setDrafts((current) => ({ ...current, [row.studentId]: { notes: draft.notes, amount: event.target.value }}))} />
+                    <select aria-label={labels.status} value={status} disabled={working} onChange={(event) => setStatusDrafts((current) => ({ ...current, [row.studentId]: event.target.value as Status }))} className="h-10 w-full rounded-xl border border-input bg-card px-2 text-base">
+                      {(["PENDING", "APPROVED", "PAID", "CANCELLED"] as const).map((value) => <option key={value} value={value}>{labels.statuses[value]}</option>)}
+                    </select>
+                  </div>
+                  <Input value={draft.notes} disabled={working} aria-label={labels.notes} placeholder={labels.notes} className="mt-2 h-10" onChange={(event) => setDrafts((current) => ({ ...current, [row.studentId]: { amount: draft.amount, notes: event.target.value }}))} />
+                  {row.deduction > 0 || row.bonus > 0 ? (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {labels.deduction} <Ltr>{formatMoney(row.deduction, locale)}</Ltr>
+                      {" · "}{labels.bonus} <Ltr>{formatMoney(row.bonus, locale)}</Ltr>
+                    </p>
+                  ) : null}
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <Button type="button" size="sm" disabled={working || !dirty} onClick={() => persist(row)}>{row.id ? labels.save : labels.post}</Button>
+                    <StipendEditor row={row} period={period} locale={locale} labels={labels} onDone={(message) => { notify(message); router.refresh(); }} />
+                    <Button type="button" size="sm" variant="outline" disabled={!row.id || working || status === "APPROVED" || status === "PAID"} onClick={() => setStatus(row, "APPROVED")}>{labels.approve}</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={!row.id || working || status !== "APPROVED"} onClick={() => setStatus(row, "PAID")}>{labels.paid}</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={!row.id || working} onClick={() => remove(row)}>{labels.remove}</Button>
+                    {accountEditor(row)}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm md:block">
+            <table className="w-full min-w-[920px] border-collapse text-sm">
+              <thead className="bg-slate-50 text-xs text-slate-500">
+                <tr className="h-9">
+                  <th className="w-10 px-3 text-start font-medium">
+                    <input ref={allRef} type="checkbox" aria-label={labels.select} onChange={toggleAll} checked={visible.length > 0 && visible.every((row) => selected.has(row.studentId))} className="size-4" />
+                  </th>
+                  <th className="px-3 text-start font-medium">{labels.name}</th>
+                  <th className="px-3 text-start font-medium">{labels.amount}</th>
+                  <th className="px-3 text-start font-medium">{labels.notes}</th>
+                  <th className="px-3 text-start font-medium">{labels.status}</th>
+                  <th className="px-3 text-start font-medium">{labels.net}</th>
+                  <th className="px-3 text-start font-medium">{labels.edit}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((row) => {
+                  const draft = draftOf(row);
+                  const status = statusOf(row);
+                  const dirty = rowDirty(row);
+                  const working = busy === row.studentId || busy === row.id;
+                  const net = netOf(row);
+                  return (
+                    <tr key={row.studentId} className="border-t border-slate-100">
+                      <td className="px-3 align-top pt-3">
+                        <input type="checkbox" checked={selected.has(row.studentId)} onChange={() => setSelected((current) => { const next = new Set(current); if (next.has(row.studentId)) next.delete(row.studentId); else next.add(row.studentId); return next; })} aria-label={labels.select} className="size-4" />
+                      </td>
+                      <td className="max-w-[16rem] px-3 py-2 align-top">
+                        <span className="block font-medium">{row.name}</span>
+                        {row.accountLine ? <span className="block truncate text-[11px] text-slate-500"><Ltr>{row.accountLine}</Ltr></span> : null}
+                        {accountEditor(row)}
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <Input type="number" min={0} step="0.01" value={draft.amount} disabled={working} aria-label={labels.amount} placeholder={labels.amount} className="h-9 w-28" onChange={(event) => setDrafts((current) => ({ ...current, [row.studentId]: { notes: draft.notes, amount: event.target.value }}))} />
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <Input value={draft.notes} disabled={working} aria-label={labels.notes} placeholder={labels.notes} className="h-9 min-w-36" onChange={(event) => setDrafts((current) => ({ ...current, [row.studentId]: { amount: draft.amount, notes: event.target.value }}))} />
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <select aria-label={labels.status} value={status} disabled={working} onChange={(event) => setStatusDrafts((current) => ({ ...current, [row.studentId]: event.target.value as Status }))} className="h-9 rounded-xl border border-input bg-card px-2 text-sm">
+                          {(["PENDING", "APPROVED", "PAID", "CANCELLED"] as const).map((value) => <option key={value} value={value}>{labels.statuses[value]}</option>)}
+                        </select>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 align-top">
+                        {row.id ? <Ltr className="font-semibold">{formatMoney(net, locale)}</Ltr> : <Badge tone="PENDING">{labels.notPosted}</Badge>}
+                        {row.deduction > 0 || row.bonus > 0 ? (
+                          <span className="mt-1 block text-[11px] text-slate-500">
+                            {labels.deduction} <Ltr>{formatMoney(row.deduction, locale)}</Ltr>
+                            {" · "}{labels.bonus} <Ltr>{formatMoney(row.bonus, locale)}</Ltr>
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 align-top">
+                        <div className="flex flex-wrap gap-1">
+                          <Button type="button" size="sm" disabled={working || !dirty} onClick={() => persist(row)}>{row.id ? labels.save : labels.post}</Button>
+                          <StipendEditor row={row} period={period} locale={locale} labels={labels} onDone={(message) => { notify(message); router.refresh(); }} />
+                          <Button type="button" size="sm" variant="outline" disabled={!row.id || working || status === "APPROVED" || status === "PAID"} onClick={() => setStatus(row, "APPROVED")}>{labels.approve}</Button>
+                          <Button type="button" size="sm" variant="outline" disabled={!row.id || working || status !== "APPROVED"} onClick={() => setStatus(row, "PAID")}>{labels.paid}</Button>
+                          <Button type="button" size="sm" variant="outline" disabled={!row.id || working} onClick={() => remove(row)}>{labels.remove}</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {visible.length === 0 ? <p className="mt-2 rounded-2xl border border-slate-200 bg-white px-4 py-6 text-sm text-slate-500">{needle ? labels.noMatches : labels.none}</p> : null}
         </>
       )}
       {toast ? <div className="fixed inset-x-0 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-50 mx-auto w-fit rounded-full bg-slate-900 px-4 py-2 text-sm text-white shadow-lg md:bottom-6">{toast}</div> : null}

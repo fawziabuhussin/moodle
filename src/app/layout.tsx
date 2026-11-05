@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
+import { Suspense, type ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { Almarai, Cairo, Heebo, Inter } from "next/font/google";
+import { RouteProgress } from "@/components/shell/route-progress";
 import { getLocale } from "@/lib/auth";
 import { direction } from "@/lib/constants";
 import "./globals.css";
@@ -22,6 +23,8 @@ export const viewport: Viewport = {
   themeColor: "#0F172A",
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -29,7 +32,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   const locale = await getLocale();
   return (
     <html lang={locale} dir={direction(locale)} className={`${heebo.variable} ${cairo.variable} ${almarai.variable} ${inter.variable} h-full`}>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body className="min-h-dvh antialiased">
+        <Suspense fallback={null}>
+          <RouteProgress />
+        </Suspense>
+        {children}
+      </body>
     </html>
   );
 }

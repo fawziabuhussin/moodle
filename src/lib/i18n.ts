@@ -44,6 +44,7 @@ const he = {
   common: {
     save: "שמירה",
     saving: "שומרים…",
+    loading: "טוענים את העמוד",
     create: "יצירה",
     add: "הוספה",
     edit: "עריכה",
@@ -525,6 +526,7 @@ const ar: Dictionary = {
   common: {
     save: "حفظ",
     saving: "جارٍ الحفظ…",
+    loading: "جارٍ تحميل الصفحة",
     create: "إنشاء",
     add: "إضافة",
     edit: "تعديل",
@@ -1004,6 +1006,7 @@ const en: Dictionary = {
   common: {
     save: "Save",
     saving: "Saving…",
+    loading: "Loading the page",
     create: "Create",
     add: "Add",
     edit: "Edit",
