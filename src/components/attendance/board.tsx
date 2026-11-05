@@ -15,6 +15,7 @@ import {
   markAllAttendedAction,
   saveAttendanceStatusAction,
   saveAttendanceTimesAction,
+  setAttendanceOfflineAction,
 } from "@/server/actions/attendance";
 
 const STATUSES = ["ATTENDED", "LATE", "ABSENT", "EXCUSED"] as const;
@@ -70,6 +71,12 @@ export type AttendanceLabels = {
   previous: string;
   today: string;
   next: string;
+  markOffline: string;
+  clearOffline: string;
+  weekdayTitle: string;
+  weekdayBody: string;
+  offlineTitle: string;
+  offlineBody: string;
 };
 
 const statusClass: Record<Status, string> = {
@@ -149,6 +156,7 @@ export function AttendanceBoard({
   labels,
   pathname = "/attendance",
   hideCourseSelect = false,
+  closure = null,
 }: {
   students: AttendanceStudent[];
   courses: { id: string; title: string }[];
@@ -160,6 +168,7 @@ export function AttendanceBoard({
   labels: AttendanceLabels;
   pathname?: string;
   hideCourseSelect?: boolean;
+  closure?: "weekday" | "offline" | null;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(students);
@@ -305,11 +314,36 @@ export function AttendanceBoard({
               {labels.next}
               <ChevronRight className="size-3.5 rtl:rotate-180" />
             </button>
+            {closure === "weekday" ? null : (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={() => {
+                  const data = new FormData();
+                  data.set("date", date);
+                  data.set("offline", closure === "offline" ? "0" : "1");
+                  startTransition(async () => {
+                    const result = await setAttendanceOfflineAction(null, data);
+                    flash(result?.error ?? labels.saved);
+                    router.refresh();
+                  });
+                }}
+                className={cn(
+                  "inline-flex h-9 items-center rounded-xl px-2.5 text-xs font-semibold shadow-sm",
+                  closure === "offline" ? "bg-white text-slate-700 ring-1 ring-slate-200" : "bg-slate-900 text-white",
+                )}
+              >
+                {closure === "offline" ? labels.clearOffline : labels.markOffline}
+              </button>
+            )}
           </div>
-          <Button type="button" size="sm" className="h-9 lg:ms-auto" disabled={visible.length === 0 || marking || isPending} onClick={markVisibleAttended}>
-            {labels.markAll}
-          </Button>
+          {closure ? null : (
+            <Button type="button" size="sm" className="h-9 lg:ms-auto" disabled={visible.length === 0 || marking || isPending} onClick={markVisibleAttended}>
+              {labels.markAll}
+            </Button>
+          )}
         </div>
+        {closure ? null : (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {(["ALL", "ATTENDED", "LATE", "ABSENT", "EXCUSED"] as const).map((key) => (
             <button
@@ -326,12 +360,20 @@ export function AttendanceBoard({
             </button>
           ))}
         </div>
+        )}
       </div>
 
-      {rows.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{labels.noStudents}</p> : null}
-      {rows.length > 0 && visible.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{labels.noMatches}</p> : null}
+      {closure ? (
+        <div className="rounded-3xl border border-slate-200 bg-slate-50 px-6 py-10 text-center">
+          <p className="text-lg font-semibold text-slate-900">{closure === "weekday" ? labels.weekdayTitle : labels.offlineTitle}</p>
+          <p className="mt-2 text-sm text-slate-600">{closure === "weekday" ? labels.weekdayBody : labels.offlineBody}</p>
+        </div>
+      ) : null}
 
-      <div className="max-w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
+      {!closure && rows.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{labels.noStudents}</p> : null}
+      {!closure && rows.length > 0 && visible.length === 0 ? <p className="px-1 text-sm text-muted-foreground">{labels.noMatches}</p> : null}
+
+      {closure ? null : <div className="max-w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
         <table className="w-full min-w-[640px] border-collapse text-sm">
           <thead className="bg-slate-50 text-xs text-slate-500">
             <tr className="h-9">
@@ -377,7 +419,7 @@ export function AttendanceBoard({
             ))}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       <HoursDialog
         student={editingStudent}

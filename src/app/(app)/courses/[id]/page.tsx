@@ -9,7 +9,7 @@ import { TabLinks } from "@/components/tab-links";
 import { Badge } from "@/components/ui/badge";
 import { Input, Textarea } from "@/components/ui/input";
 import { isStudentPortal, loadCourseForSession } from "@/lib/access";
-import { getAttendanceSetting } from "@/lib/attendance";
+import { attendanceClosure, getAttendanceSetting } from "@/lib/attendance";
 import { activeStudentWhere, isCurrentYearStudent } from "@/lib/cohort";
 import { getLocale, requireUser } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
@@ -123,6 +123,7 @@ export default async function CoursePage({
   const teacherIds = new Set(course.teachers.map((teacher) => teacher.userId));
   const studentIds = new Set(activeEnrollments.map((enrollment) => enrollment.userId));
   const records = new Map((attendance?.[1] ?? []).map((record) => [record.userId, record]));
+  const closure = tab === "attendance" && canAttend ? await attendanceClosure(date) : null;
 
   const tabs = [
     ...(staff ? [] : [{ key: "content", href: `${base}?tab=content`, label: dict.courses.content }]),
@@ -384,6 +385,7 @@ export default async function CoursePage({
             officialStart={attendance[0]?.officialStartTime ?? "16:00"}
             graceMinutes={attendance[0]?.lateGraceMinutes ?? 0}
             timeZone={appTimeZone()}
+            closure={closure}
             labels={{
               search: dict.attendance.search,
               all: dict.attendance.all,
@@ -421,6 +423,12 @@ export default async function CoursePage({
               previous: dict.attendance.previous,
               today: dict.attendance.today,
               next: dict.attendance.next,
+              markOffline: dict.attendance.markOffline,
+              clearOffline: dict.attendance.clearOffline,
+              weekdayTitle: dict.attendance.weekdayTitle,
+              weekdayBody: dict.attendance.weekdayBody,
+              offlineTitle: dict.attendance.offlineTitle,
+              offlineBody: dict.attendance.offlineBody,
             }}
           />
         </div>

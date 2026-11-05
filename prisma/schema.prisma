@@ -257,6 +257,11 @@ model AttendanceRecord {
   @@index([courseId])
 }
 
+model AttendanceOfflineDay {
+  date      DateTime @id @db.Date
+  createdAt DateTime @default(now())
+}
+
 model StipendPayment {
   id                String        @id @default(cuid())
   studentId         String

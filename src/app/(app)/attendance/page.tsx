@@ -3,7 +3,7 @@ import { AttendanceBoard } from "@/components/attendance/board";
 import { SyncAttendanceButton } from "@/components/attendance/sync-button";
 import { Ltr } from "@/components/ltr";
 import { PageHeader } from "@/components/page-header";
-import { getAttendanceSetting } from "@/lib/attendance";
+import { attendanceClosure, getAttendanceSetting } from "@/lib/attendance";
 import { getLocale, requirePermission } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
@@ -20,12 +20,13 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
   const date = query.date && /^\d{4}-\d{2}-\d{2}$/.test(query.date) ? query.date : todayISO();
   const courseId = query.courseId || "";
   const db = getPrisma();
-  const [courses, setting] = await Promise.all([
+  const [courses, setting, closure] = await Promise.all([
     db.course.findMany({ where: { isActive: true }, orderBy: { title: "asc" }, select: { id: true, title: true } }),
     getAttendanceSetting(courseId || null),
+    attendanceClosure(date),
   ]);
   const currentYear = activeStudentWhere();
-  const students = courseId
+  const students = closure ? [] : courseId
     ? (
         await db.courseEnrollment.findMany({
           where: { courseId, user: currentYear },
@@ -37,9 +38,11 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
         where: { ...currentYear, roles: { some: { role: { slug: "student" } } } },
         orderBy: { firstName: "asc" },
       });
-  const records = await db.attendanceRecord.findMany({
-    where: { date: calendarDateFromISO(date), courseScope: courseId || "none", userId: { in: students.map((student) => student.id) } },
-  });
+  const records = closure || students.length === 0
+    ? []
+    : await db.attendanceRecord.findMany({
+        where: { date: calendarDateFromISO(date), courseScope: courseId || "none", userId: { in: students.map((student) => student.id) } },
+      });
   const byUser = new Map(records.map((record) => [record.userId, record]));
 
   return (
@@ -76,6 +79,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
         officialStart={setting?.officialStartTime ?? "16:00"}
         graceMinutes={setting?.lateGraceMinutes ?? 0}
         timeZone={appTimeZone()}
+        closure={closure}
         labels={{
           search: dict.attendance.search,
           all: dict.attendance.all,
@@ -113,6 +117,12 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
           previous: dict.attendance.previous,
           today: dict.attendance.today,
           next: dict.attendance.next,
+          markOffline: dict.attendance.markOffline,
+          clearOffline: dict.attendance.clearOffline,
+          weekdayTitle: dict.attendance.weekdayTitle,
+          weekdayBody: dict.attendance.weekdayBody,
+          offlineTitle: dict.attendance.offlineTitle,
+          offlineBody: dict.attendance.offlineBody,
         }}
       />
     </div>

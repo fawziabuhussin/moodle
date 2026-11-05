@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import type { AttendanceStatus } from "@prisma/client";
-import { recordTerminalTap, resolveArrivalStatus } from "@/lib/attendance";
+import { attendanceClosure, recordTerminalTap, resolveArrivalStatus } from "@/lib/attendance";
+import { isClosedAttendanceWeekday } from "@/lib/attendance-days";
 import { syncAttendanceSheet } from "@/server/attendance-sheet";
 import { activeStudentWhere } from "@/lib/cohort";
 import { getLocale, requirePermission } from "@/lib/auth";
@@ -20,6 +21,13 @@ function refreshAttendance(courseId: string | null) {
   if (courseId) revalidatePath(`/courses/${courseId}`);
 }
 
+async function closedDayMessage(date: string, dict: ReturnType<typeof getDictionary>) {
+  const closure = await attendanceClosure(date);
+  if (closure === "weekday") return dict.attendance.weekdayBody;
+  if (closure === "offline") return dict.attendance.offlineBody;
+  return null;
+}
+
 export async function saveAttendanceStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requirePermission("manage_attendance");
   const dict = getDictionary(await getLocale());
@@ -28,6 +36,8 @@ export async function saveAttendanceStatusAction(_prev: ActionState, formData: F
   const status = field(formData, "status");
   const courseId = optional(formData, "courseId");
   if (!userId || !STATUSES.has(status)) return { error: dict.errors.invalid };
+  const closed = await closedDayMessage(date, dict);
+  if (closed) return { error: closed };
   let day: Date;
   try {
     day = calendarDateFromISO(date);
@@ -65,6 +75,8 @@ export async function saveAttendanceTimesAction(_prev: ActionState, formData: Fo
   const checkIn = field(formData, "checkIn");
   const checkOut = field(formData, "checkOut");
   if (!userId || !parseHm(checkIn)) return { error: dict.errors.invalid };
+  const closed = await closedDayMessage(date, dict);
+  if (closed) return { error: closed };
   let day: Date;
   let checkInTime: Date;
   let checkOutTime: Date | null = null;
@@ -117,6 +129,8 @@ export async function clearAttendanceTimesAction(_prev: ActionState, formData: F
   const date = field(formData, "date");
   const courseId = optional(formData, "courseId");
   if (!userId) return { error: dict.errors.invalid };
+  const closed = await closedDayMessage(date, dict);
+  if (closed) return { error: closed };
   let day: Date;
   try {
     day = calendarDateFromISO(date);
@@ -138,6 +152,8 @@ export async function markAllAttendedAction(_prev: ActionState, formData: FormDa
   const courseId = optional(formData, "courseId");
   const ids = formData.getAll("userId").filter((value): value is string => typeof value === "string" && value.length > 0);
   if (ids.length === 0) return { error: dict.errors.invalid };
+  const closed = await closedDayMessage(date, dict);
+  if (closed) return { error: closed };
   let day: Date;
   try {
     day = calendarDateFromISO(date);
@@ -223,6 +239,22 @@ export async function saveCourseAttendanceSettingsAction(_prev: ActionState, for
   });
   revalidatePath("/settings");
   return { success: dict.settings.saved };
+}
+
+export async function setAttendanceOfflineAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requirePermission("manage_attendance");
+  const dict = getDictionary(await getLocale());
+  const date = field(formData, "date");
+  const offline = field(formData, "offline") === "1";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || isClosedAttendanceWeekday(date)) return { error: dict.attendance.weekdayBody };
+  const day = calendarDateFromISO(date);
+  if (offline) {
+    await getPrisma().attendanceOfflineDay.upsert({ where: { date: day }, create: { date: day }, update: {} });
+  } else {
+    await getPrisma().attendanceOfflineDay.deleteMany({ where: { date: day } });
+  }
+  refreshAttendance(null);
+  return { success: dict.common.saved };
 }
 
 export async function simulateTerminalAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

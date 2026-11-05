@@ -1,12 +1,24 @@
 import "server-only";
 
 import type { AttendanceSource, AttendanceStatus } from "@prisma/client";
+import { isClosedAttendanceWeekday } from "@/lib/attendance-days";
 import { getPrisma } from "@/lib/prisma";
 import {
   calendarDate,
+  calendarDateFromISO,
   evaluateArrival,
+  formatCalendarDate,
   monthRange,
 } from "@/lib/time";
+
+export type AttendanceClosure = "weekday" | "offline" | null;
+
+export async function attendanceClosure(iso: string): Promise<AttendanceClosure> {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  if (isClosedAttendanceWeekday(iso)) return "weekday";
+  const row = await getPrisma().attendanceOfflineDay.findUnique({ where: { date: calendarDateFromISO(iso) } });
+  return row ? "offline" : null;
+}
 
 export async function getAttendanceSetting(courseId?: string | null) {
   const db = getPrisma();
@@ -40,7 +52,7 @@ export type TerminalTapResult =
         date: Date;
       };
     }
-  | { ok: false; error: "UNKNOWN_BADGE" | "UNKNOWN_COURSE" | "ALREADY_COMPLETE" | "INVALID_TIME" };
+  | { ok: false; error: "UNKNOWN_BADGE" | "UNKNOWN_COURSE" | "ALREADY_COMPLETE" | "INVALID_TIME" | "CLOSED_DAY" };
 
 export async function recordTerminalTap(input: {
   hardwareBadgeId: string;
@@ -69,6 +81,10 @@ export async function recordTerminalTap(input: {
   if (Number.isNaN(when.getTime())) return { ok: false, error: "INVALID_TIME" };
 
   const date = calendarDate(when);
+  const iso = formatCalendarDate(date, "UTC");
+  if (isClosedAttendanceWeekday(iso) || (await db.attendanceOfflineDay.findUnique({ where: { date } }))) {
+    return { ok: false, error: "CLOSED_DAY" };
+  }
   const courseScope = courseId ?? "none";
   const existing = await db.attendanceRecord.findUnique({
     where: { userId_date_courseScope: { userId: user.id, date, courseScope } },
