@@ -394,47 +394,55 @@ export async function updateStudentProfileAction(_prev: ActionState, formData: F
     const taken = await getPrisma().user.findFirst({ where: { email, NOT: { id: userId } }, select: { id: true } });
     if (taken) return { error: dict.users.emailTaken };
   }
+  const nationalId = optional(formData, "nationalId");
+  if (nationalId && !isNationalId(nationalId)) return { error: dict.errors.invalid };
   const amount = Number(field(formData, "defaultStipendAmount") || "0");
   const confirmation = formData.getAll("hasBankConfirmation");
-  await getPrisma().studentProfile.upsert({
-    where: { userId },
-    create: {
-      userId,
-      nationalId: optional(formData, "nationalId"),
-      dateOfBirth: dateOrNull(optional(formData, "dateOfBirth")),
-      address: optional(formData, "address"),
-      city: optional(formData, "city"),
-      academicTrack: optional(formData, "academicTrack"),
-      bio: optional(formData, "bio"),
-      defaultStipendAmount: Number.isFinite(amount) ? amount : 0,
-      bankName: optional(formData, "bankName"),
-      bankBranch: optional(formData, "bankBranch"),
-      bankAccountNumber: optional(formData, "bankAccountNumber"),
-      emergencyContactName: optional(formData, "emergencyContactName"),
-      emergencyContactPhone: optional(formData, "emergencyContactPhone"),
-      notes: optional(formData, "notes"),
-    },
-    update: {
-      nationalId: optional(formData, "nationalId"),
-      dateOfBirth: dateOrNull(optional(formData, "dateOfBirth")),
-      address: optional(formData, "address"),
-      city: optional(formData, "city"),
-      academicTrack: optional(formData, "academicTrack"),
-      bio: optional(formData, "bio"),
-      defaultStipendAmount: Number.isFinite(amount) ? amount : 0,
-      bankName: optional(formData, "bankName"),
-      bankBranch: optional(formData, "bankBranch"),
-      bankAccountNumber: optional(formData, "bankAccountNumber"),
-      emergencyContactName: optional(formData, "emergencyContactName"),
-      emergencyContactPhone: optional(formData, "emergencyContactPhone"),
-      notes: optional(formData, "notes"),
-      ...(confirmation.length > 0 ? { hasBankConfirmation: confirmation.includes("yes") } : {}),
-    },
-  });
-  await getPrisma().user.update({
-    where: { id: userId },
-    data: { phone: optional(formData, "phone"), ...(email ? { email } : {}) },
-  });
+  const nameAr = optional(formData, "nameAr");
+  const nameHe = optional(formData, "nameHe");
+  const profileFields = {
+    nationalId,
+    nameAr,
+    nameHe,
+    dateOfBirth: dateOrNull(optional(formData, "dateOfBirth")),
+    address: optional(formData, "address"),
+    city: optional(formData, "city"),
+    academicTrack: optional(formData, "academicTrack"),
+    bio: optional(formData, "bio"),
+    medicalNotes: optional(formData, "medicalNotes"),
+    defaultStipendAmount: Number.isFinite(amount) ? amount : 0,
+    bankName: optional(formData, "bankName"),
+    bankBranch: optional(formData, "bankBranch"),
+    bankAccountNumber: optional(formData, "bankAccountNumber"),
+    emergencyContactName: optional(formData, "emergencyContactName"),
+    emergencyContactPhone: optional(formData, "emergencyContactPhone"),
+    notes: optional(formData, "notes"),
+    cohort: optional(formData, "cohort"),
+    psychometryTrack: optional(formData, "psychometryTrack"),
+    volunteeringPlace: optional(formData, "volunteeringPlace"),
+    ...(confirmation.length > 0 ? { hasBankConfirmation: confirmation.includes("yes") } : {}),
+  };
+  const hebrew = nameHe?.trim() ?? "";
+  const nameParts = hebrew ? splitName(hebrew) : null;
+  try {
+    await getPrisma().studentProfile.upsert({
+      where: { userId },
+      create: { userId, ...profileFields },
+      update: profileFields,
+    });
+    await getPrisma().user.update({
+      where: { id: userId },
+      data: {
+        phone: optional(formData, "phone"),
+        nameAr,
+        ...(nameParts ? { nameHe: hebrew, firstName: nameParts.firstName, lastName: nameParts.lastName } : {}),
+        ...(email ? { email } : {}),
+      },
+    });
+  } catch (error) {
+    if (isUniqueConflict(error)) return { error: dict.users.emailTaken };
+    return { error: dict.errors.generic };
+  }
   revalidatePath(`/students/${userId}`);
   revalidatePath("/students");
   revalidatePath("/users");

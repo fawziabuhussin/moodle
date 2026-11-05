@@ -8,6 +8,7 @@ import { asNumber, formatDate } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n";
 import { hasPermission } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
+import { stipendPeriod } from "@/lib/stipends";
 import { currentPeriod } from "@/lib/time";
 import { fullName } from "@/lib/utils";
 
@@ -21,7 +22,8 @@ export default async function StipendsPage({ searchParams }: { searchParams: Pro
   const query = await searchParams;
   const now = currentPeriod();
   const summary = manager && query.view === "summary";
-  const match = query.period && /^\d{4}-\d{2}$/.test(query.period) ? query.period : `${now.year}-${String(now.month).padStart(2, "0")}`;
+  const fallback = `${now.year}-${String(now.month).padStart(2, "0")}`;
+  const match = stipendPeriod(query.period, fallback);
   const [year, month] = match.split("-").map(Number);
   const db = getPrisma();
 
@@ -45,6 +47,8 @@ export default async function StipendsPage({ searchParams }: { searchParams: Pro
   const labels = {
     search: dict.stipends.search,
     month: dict.stipends.month,
+    previousMonth: dict.stipends.previousMonth,
+    nextMonth: dict.stipends.nextMonth,
     saving: dict.common.saving,
     approve: dict.stipends.approve,
     paid: dict.stipends.paid,
@@ -80,17 +84,8 @@ export default async function StipendsPage({ searchParams }: { searchParams: Pro
       PAID: dict.status.PAID,
       CANCELLED: dict.status.CANCELLED,
     },
-    editAccount: dict.users.viewEdit,
-    resetPassword: dict.users.resetPassword,
     save: dict.common.save,
-    savingAccount: dict.common.saving,
     close: dict.attendance.close,
-    email: dict.common.email,
-    phone: dict.common.phone,
-    bank: dict.students.bankName,
-    branch: dict.students.bankBranch,
-    accountNumber: dict.students.bankAccount,
-    confirmation: dict.students.bankConfirmation,
     post: dict.stipends.post,
     edit: dict.stipends.edit,
     notPosted: dict.stipends.notPosted,
@@ -115,31 +110,16 @@ export default async function StipendsPage({ searchParams }: { searchParams: Pro
             id: payment?.id ?? "",
             studentId: student.id,
             name: fullName(student),
+            nationalId: student.studentProfile?.nationalId ?? "",
+            bankName: student.studentProfile?.bankName ?? "",
+            bankBranch: student.studentProfile?.bankBranch ?? "",
+            bankAccount: student.studentProfile?.bankAccountNumber ?? "",
             amount: payment ? asNumber(payment.baseAmount) : null,
             deduction: payment ? asNumber(payment.deductionAmount) : 0,
             bonus: payment ? asNumber(payment.bonusAmount) : 0,
             finalAmount: payment ? asNumber(payment.finalAmount) : null,
             notes: payment?.notes ?? "",
             status: payment?.status ?? "PENDING",
-            accountLine: [
-              student.email,
-              student.phone,
-              student.studentProfile?.nationalId,
-              student.studentProfile?.bankName,
-              student.studentProfile?.bankBranch,
-              student.studentProfile?.bankAccountNumber,
-              student.studentProfile?.hasBankConfirmation ? "אישור" : "",
-            ].filter(Boolean).join(" · "),
-            account: {
-              id: student.id,
-              email: student.email,
-              phone: student.phone,
-              nationalId: student.studentProfile?.nationalId ?? null,
-              bankName: student.studentProfile?.bankName ?? null,
-              bankBranch: student.studentProfile?.bankBranch ?? null,
-              bankAccount: student.studentProfile?.bankAccountNumber ?? null,
-              bankConfirmed: student.studentProfile?.hasBankConfirmation ?? false,
-            },
           };
         })}
         summary={people.map((student) => ({

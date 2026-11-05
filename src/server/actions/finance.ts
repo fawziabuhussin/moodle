@@ -363,3 +363,23 @@ export async function updateSessionAction(_prev: ActionState, formData: FormData
   revalidatePath(`/students/${existing.studentId}`);
   return { success: dict.sessions.saved };
 }
+
+export async function setSessionStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const actor = await requireUser();
+  const dict = getDictionary(await getLocale());
+  if (!actor.permissions.includes("manage_private_sessions") && !actor.permissions.includes("manage_users_and_roles")) {
+    return { error: dict.errors.forbidden };
+  }
+  const id = field(formData, "id");
+  const status = field(formData, "status");
+  if (!id || !SESSION_STATUSES.has(status)) return { error: dict.errors.invalid };
+  const existing = await getPrisma().privateSession.findUnique({ where: { id } });
+  if (!existing) return { error: dict.errors.invalid };
+  if (existing.status !== status) {
+    await getPrisma().privateSession.update({ where: { id }, data: { status: status as PrivateSessionStatus } });
+    await notifySession(existing.studentId, actor.id, existing.title, existing.scheduledAt, existing.durationMinutes, false);
+  }
+  revalidatePath("/sessions");
+  revalidatePath(`/students/${existing.studentId}`);
+  return { success: dict.common.saved };
+}

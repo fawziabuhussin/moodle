@@ -2,6 +2,30 @@ import { roundMoney } from "@/lib/format";
 
 export const STIPEND_SCHOOL_DAYS = 20;
 
+/** 2026–2027 financial year: September 2026 through August 2027. */
+export const ACADEMIC_STIPEND_PERIODS = [
+  "2026-09",
+  "2026-10",
+  "2026-11",
+  "2026-12",
+  "2027-01",
+  "2027-02",
+  "2027-03",
+  "2027-04",
+  "2027-05",
+  "2027-06",
+  "2027-07",
+  "2027-08",
+] as const;
+
+export const DEFAULT_STIPEND_BASE = 1600;
+
+export function stipendPeriod(requested: string | undefined, fallback: string) {
+  if (requested && (ACADEMIC_STIPEND_PERIODS as readonly string[]).includes(requested)) return requested;
+  if ((ACADEMIC_STIPEND_PERIODS as readonly string[]).includes(fallback)) return fallback;
+  return ACADEMIC_STIPEND_PERIODS[0];
+}
+
 export function attendanceSnapshot(
   records: { status: "ATTENDED" | "LATE" | "ABSENT" | "EXCUSED" }[],
 ) {

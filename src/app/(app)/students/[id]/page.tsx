@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ActionForm, SubmitButton } from "@/components/form";
 import { Ltr, Timestamp } from "@/components/ltr";
 import { PageHeader } from "@/components/page-header";
+import { StudentProfileEditor } from "@/components/students/profile-editor";
 import { TabLinks } from "@/components/tab-links";
 import { Badge } from "@/components/ui/badge";
-import { Input, Textarea } from "@/components/ui/input";
 import { canSeeFinance, canSeeStaffNotes, canViewStudent, isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
@@ -16,7 +15,6 @@ import { getPrisma } from "@/lib/prisma";
 import { attendanceSnapshot } from "@/lib/stipends";
 import { appTimeZone, formatMinutes, formatTime } from "@/lib/time";
 import { fullName } from "@/lib/utils";
-import { updateStudentProfileAction } from "@/server/actions/people";
 
 export default async function StudentPage({
   params,
@@ -169,69 +167,80 @@ export default async function StudentPage({
       ) : null}
 
       {tab === "profile" ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 text-sm">
-            <h2 className="font-semibold">{dict.students.contact}</h2>
-            <dl className="mt-3 grid gap-2">
-              <Row label={dict.common.email} value={student.email} ltr />
-              <Row label={dict.common.phone} value={student.phone} ltr />
-              <Row label={dict.students.nationalId} value={profile?.nationalId} ltr />
-              <Row label={dict.students.dob} value={profile?.dateOfBirth ? formatDate(profile.dateOfBirth, locale) : null} />
-              <Row label={dict.students.nameAr} value={profile?.nameAr} />
-              <Row label={dict.students.cohort} value={profile?.cohort} />
-              <Row label={dict.students.psychometry} value={profile?.psychometryTrack} />
-              <Row label={dict.students.volunteering} value={profile?.volunteeringPlace} />
-              <Row label={dict.students.city} value={profile?.city} />
-              <Row label={dict.students.address} value={profile?.address} />
-              <Row label={dict.students.emergencyName} value={profile?.emergencyContactName} />
-              <Row label={dict.students.emergencyPhone} value={profile?.emergencyContactPhone} ltr />
-            </dl>
-            {profile?.bio ? <p className="mt-3 text-muted-foreground">{profile.bio}</p> : null}
-          </section>
-          {finance ? (
-            <section className="rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 text-sm">
-              <h2 className="font-semibold">{dict.students.payment}</h2>
-              <dl className="mt-3 grid gap-2">
-                <Row label={dict.students.defaultStipend} value={formatMoney(asNumber(profile?.defaultStipendAmount), locale)} ltr />
-                <Row label={dict.students.bankName} value={profile?.bankName} />
-                <Row label={dict.students.bankBranch} value={profile?.bankBranch} ltr />
-                <Row label={dict.students.bankAccount} value={profile?.bankAccountNumber} ltr />
-                <Row label={dict.students.stipendApproval} value={profile?.stipendApproval} />
-                <Row label={dict.students.bankConfirmation} value={profile?.hasBankConfirmation ? dict.students.bankConfirmed : dict.students.bankMissing} />
-                <Row label={dict.users.badge} value={student.hardwareBadgeId} ltr />
-                <Row label={dict.users.pin} value={student.terminalPin} ltr />
-              </dl>
-            </section>
-          ) : null}
-          {canEdit ? (
-            <ActionForm action={updateStudentProfileAction} className="grid gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 lg:col-span-2">
-              <input type="hidden" name="userId" value={student.id} />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Input name="email" type="email" defaultValue={student.email} placeholder={dict.common.email} />
-                <Input name="phone" defaultValue={student.phone ?? ""} placeholder={dict.common.phone} />
-                <Input name="nationalId" defaultValue={profile?.nationalId ?? ""} placeholder={dict.students.nationalId} />
-                <Input name="dateOfBirth" type="date" defaultValue={profile?.dateOfBirth ? profile.dateOfBirth.toISOString().slice(0, 10) : ""} />
-                <Input name="academicTrack" defaultValue={profile?.academicTrack ?? ""} placeholder={dict.students.track} />
-                <Input name="city" defaultValue={profile?.city ?? ""} placeholder={dict.students.city} />
-                <Input name="address" defaultValue={profile?.address ?? ""} placeholder={dict.students.address} />
-                <Input name="emergencyContactName" defaultValue={profile?.emergencyContactName ?? ""} placeholder={dict.students.emergencyName} />
-                <Input name="emergencyContactPhone" defaultValue={profile?.emergencyContactPhone ?? ""} placeholder={dict.students.emergencyPhone} />
-                <Input name="defaultStipendAmount" type="number" min={0} step="0.01" defaultValue={asNumber(profile?.defaultStipendAmount)} />
-                <Input name="bankName" defaultValue={profile?.bankName ?? ""} placeholder={dict.students.bankName} />
-                <Input name="bankBranch" defaultValue={profile?.bankBranch ?? ""} placeholder={dict.students.bankBranch} />
-                <Input name="bankAccountNumber" defaultValue={profile?.bankAccountNumber ?? ""} placeholder={dict.students.bankAccount} />
-              </div>
-              <Textarea name="bio" defaultValue={profile?.bio ?? ""} placeholder={dict.students.bio} />
-              <Textarea name="notes" defaultValue={profile?.notes ?? ""} placeholder={dict.students.staffNotes} />
-              <SubmitButton label={dict.common.save} pendingLabel={dict.common.saving} />
-            </ActionForm>
-          ) : staffNotes && profile?.notes ? (
-            <section className="rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 text-sm">
-              <h2 className="font-semibold">{dict.students.staffNotes}</h2>
-              <p className="mt-2">{profile.notes}</p>
-            </section>
-          ) : null}
-        </div>
+        <StudentProfileEditor
+          canEdit={canEdit}
+          showFinance={finance || canEdit}
+          showStaffNotes={staffNotes || canEdit}
+          student={{
+            id: student.id,
+            email: student.email,
+            phone: student.phone,
+            firstName: student.firstName,
+            lastName: student.lastName,
+            nameAr: student.nameAr,
+            nameHe: student.nameHe,
+            hardwareBadgeId: student.hardwareBadgeId,
+            profile: profile
+              ? {
+                  nationalId: profile.nationalId,
+                  nameAr: profile.nameAr,
+                  nameHe: profile.nameHe,
+                  dateOfBirth: profile.dateOfBirth,
+                  city: profile.city,
+                  address: profile.address,
+                  academicTrack: profile.academicTrack,
+                  cohort: profile.cohort,
+                  psychometryTrack: profile.psychometryTrack,
+                  volunteeringPlace: profile.volunteeringPlace,
+                  emergencyContactName: profile.emergencyContactName,
+                  emergencyContactPhone: profile.emergencyContactPhone,
+                  bankName: profile.bankName,
+                  bankBranch: profile.bankBranch,
+                  bankAccountNumber: profile.bankAccountNumber,
+                  hasBankConfirmation: profile.hasBankConfirmation,
+                  defaultStipendAmount: asNumber(profile.defaultStipendAmount),
+                  bio: profile.bio,
+                  medicalNotes: profile.medicalNotes,
+                  notes: profile.notes,
+                }
+              : null,
+          }}
+          labels={{
+            back: dict.students.backToStudents,
+            cancel: dict.common.cancel,
+            save: dict.students.saveChanges,
+            saving: dict.common.saving,
+            personal: dict.students.personal,
+            contact: dict.students.contact,
+            academic: dict.students.academic,
+            financial: dict.students.financial,
+            notesSection: dict.students.notesSection,
+            nameAr: dict.students.nameAr,
+            nameHe: dict.users.nameHe,
+            nationalId: dict.students.nationalId,
+            dob: dict.students.dob,
+            email: dict.common.email,
+            phone: dict.common.phone,
+            emergencyName: dict.students.emergencyName,
+            emergencyPhone: dict.students.emergencyPhone,
+            city: dict.students.city,
+            address: dict.students.address,
+            highSchool: dict.students.highSchool,
+            psychometry: dict.students.psychometry,
+            psychometryBase: dict.students.psychometryBase,
+            psychometry800: dict.students.psychometry800,
+            volunteeringPlace: dict.students.volunteeringPlace,
+            cohort: dict.students.cohort,
+            bankName: dict.students.bankName,
+            bankBranch: dict.students.bankBranch,
+            bankAccount: dict.students.bankAccount,
+            bankConfirmation: dict.students.bankConfirmationToggle,
+            defaultStipend: dict.students.defaultStipend,
+            medical: dict.students.medical,
+            studentNotes: dict.students.studentNotes,
+            staffNotes: dict.students.staffNotes,
+          }}
+        />
       ) : null}
     </div>
   );
@@ -248,15 +257,6 @@ function Stat({ label, value, progress }: { label: string; value: string; progre
           <div className="h-full rounded-full bg-lime-600" style={{ width: `${width}%` }} />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function Row({ label, value, ltr = false }: { label: string; value: string | null | undefined; ltr?: boolean }) {
-  return (
-    <div className="flex justify-between gap-3">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd>{ltr ? <Ltr>{value || "—"}</Ltr> : value || "—"}</dd>
     </div>
   );
 }
