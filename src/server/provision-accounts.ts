@@ -79,6 +79,7 @@ export async function provisionCohortAccounts(db: PrismaClient) {
         data: {
           email,
           passwordHash,
+          loginPassword: student.nationalId,
           firstName: names.firstName,
           lastName: names.lastName,
           phone: student.phone,
@@ -99,6 +100,7 @@ export async function provisionCohortAccounts(db: PrismaClient) {
       data: {
         email,
         passwordHash,
+        loginPassword: student.nationalId,
         firstName: names.firstName,
         lastName: names.lastName,
         phone: student.phone,

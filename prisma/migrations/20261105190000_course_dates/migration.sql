@@ -1,0 +1,2 @@
+ALTER TABLE "Course" ADD COLUMN "startDate" DATE;
+ALTER TABLE "Course" ADD COLUMN "endDate" DATE;

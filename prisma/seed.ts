@@ -126,6 +126,7 @@ async function main() {
       where: { email: input.email },
       update: {
         passwordHash,
+        loginPassword: input.password,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,
@@ -138,6 +139,7 @@ async function main() {
       create: {
         email: input.email,
         passwordHash,
+        loginPassword: input.password,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: input.phone,

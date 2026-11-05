@@ -58,7 +58,7 @@ export async function changeOwnPasswordAction(_prev: ActionState, formData: Form
   if (next.length < 8) return { error: dict.errors.invalid };
   const user = await getPrisma().user.findUnique({ where: { id: session.id }, select: { passwordHash: true } });
   if (!user || !(await compare(current, user.passwordHash))) return { error: dict.login.invalid };
-  await getPrisma().user.update({ where: { id: session.id }, data: { passwordHash: await hashPassword(next) } });
+  await getPrisma().user.update({ where: { id: session.id }, data: { passwordHash: await hashPassword(next), loginPassword: next } });
   revalidatePath("/student-board");
   return { success: dict.common.saved };
 }

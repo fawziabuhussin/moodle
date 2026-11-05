@@ -1,59 +1,97 @@
-import Link from "next/link";
-import { Ltr } from "@/components/ltr";
-import { ActionForm, SubmitButton } from "@/components/form";
+import { CoursesCatalog } from "@/components/courses/catalog";
+import { CreateCourseDialog } from "@/components/courses/create-course-dialog";
 import { PageHeader } from "@/components/page-header";
-import { Input, Textarea } from "@/components/ui/input";
 import { isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
+import { activeStudentWhere } from "@/lib/cohort";
 import { getDictionary } from "@/lib/i18n";
 import { hasPermission } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
-import { activeStudentWhere } from "@/lib/cohort";
-import { createCourseAction } from "@/server/actions/learning";
+import { fullName } from "@/lib/utils";
+
+function isoDate(value: Date | null) {
+  return value ? value.toISOString().slice(0, 10) : null;
+}
 
 export default async function CoursesPage() {
   const session = await requireUser();
   const dict = getDictionary(await getLocale());
   const portal = isStudentPortal(session);
   const manager = hasPermission(session.permissions, "manage_courses");
-  const courses = await getPrisma().course.findMany({
-    where: manager
-      ? {}
-      : { OR: [{ teachers: { some: { userId: session.id } } }, { enrollments: { some: { userId: session.id } } }] },
-    include: {
-      _count: { select: { teachers: true } },
-      enrollments: { where: { user: activeStudentWhere() }, select: { userId: true } },
-    },
-    orderBy: { title: "asc" },
-  });
+  const db = getPrisma();
+  const [courses, students] = await Promise.all([
+    db.course.findMany({
+      where: manager
+        ? {}
+        : { OR: [{ teachers: { some: { userId: session.id } } }, { enrollments: { some: { userId: session.id } } }] },
+      include: {
+        _count: { select: { teachers: true } },
+        enrollments: { where: { user: activeStudentWhere() }, select: { userId: true } },
+      },
+      orderBy: { code: "asc" },
+    }),
+    manager
+      ? db.user.findMany({
+          where: { ...activeStudentWhere(), roles: { some: { role: { slug: "student" } } } },
+          select: { id: true, firstName: true, lastName: true, hardwareBadgeId: true, studentProfile: { select: { psychometryTrack: true } } },
+          orderBy: { firstName: "asc" },
+        })
+      : Promise.resolve([]),
+  ]);
 
   return (
-    <div>
-      <PageHeader title={portal ? dict.nav.studentCourses : dict.courses.title} description={portal ? undefined : dict.courses.subtitle} />
-      {manager ? (
-        <ActionForm action={createCourseAction} className="mb-4 grid gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 md:grid-cols-2">
-          <h2 className="font-semibold md:col-span-2">{dict.courses.createTitle}</h2>
-          <Input name="code" placeholder={dict.courses.code} required />
-          <Input name="title" placeholder={dict.courses.postTitle} required />
-          <Textarea name="description" placeholder={dict.courses.description} className="md:col-span-2" />
-          <div className="md:col-span-2">
-            <SubmitButton label={dict.common.create} pendingLabel={dict.common.saving} />
-          </div>
-        </ActionForm>
-      ) : null}
-      {courses.length === 0 ? <p className="text-sm text-muted-foreground">{dict.courses.empty}</p> : null}
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {courses.map((course) => (
-          <Link key={course.id} href={`/courses/${course.id}`} className="rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 hover:bg-accent">
-            <p className="text-xs text-muted-foreground"><Ltr>{course.code}</Ltr></p>
-            <h2 className="font-semibold">{course.title}</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {course.enrollments.length} · {course._count.teachers}
-              {!course.isActive ? ` · ${dict.courses.inactive}` : ""}
-            </p>
-          </Link>
-        ))}
-      </div>
+    <div className="min-w-0">
+      <PageHeader
+        title={portal ? dict.nav.studentCourses : dict.courses.title}
+        description={portal ? undefined : dict.courses.subtitle}
+        action={
+          manager ? (
+            <CreateCourseDialog
+              label={dict.courses.createButton}
+              title={dict.courses.createTitle}
+              codeLabel={dict.courses.code}
+              courseTitleLabel={dict.courses.postTitle}
+              descriptionLabel={dict.courses.description}
+              startLabel={dict.courses.startDate}
+              endLabel={dict.courses.endDate}
+              rosterLabel={dict.courses.rosterPick}
+              searchLabel={dict.courses.rosterSearch}
+              selectAllLabel={dict.courses.selectAll}
+              select800Label={dict.courses.select800}
+              selectBaseLabel={dict.courses.selectBase}
+              clearLabel={dict.courses.clearRoster}
+              selectedLabel={dict.courses.selectedCount}
+              saveLabel={dict.common.create}
+              savingLabel={dict.common.saving}
+              closeLabel={dict.attendance.close}
+              students={students.map((student) => ({
+                id: student.id,
+                name: fullName(student),
+                badge: student.hardwareBadgeId,
+                psychometry: student.studentProfile?.psychometryTrack ?? null,
+              }))}
+            />
+          ) : null
+        }
+      />
+      <CoursesCatalog
+        courses={courses.map((course) => ({
+          id: course.id,
+          code: course.code,
+          title: course.title,
+          description: course.description,
+          students: course.enrollments.length,
+          teachers: course._count.teachers,
+          active: course.isActive,
+          startDate: isoDate(course.startDate),
+          endDate: isoDate(course.endDate),
+        }))}
+        searchLabel={dict.courses.search}
+        studentsLabel={dict.courses.students}
+        teachersLabel={dict.courses.teachers}
+        inactiveLabel={dict.courses.inactive}
+        emptyLabel={dict.courses.empty}
+      />
     </div>
   );
 }

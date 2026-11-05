@@ -45,7 +45,7 @@ export async function loadCourseForSession(session: SessionUser, courseId: strin
     where: { id: courseId },
     include: {
       teachers: {
-        include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+        include: { user: { select: { id: true, firstName: true, lastName: true, nameAr: true, nameHe: true, email: true } } },
       },
       enrollments: {
         include: {
@@ -54,7 +54,10 @@ export async function loadCourseForSession(session: SessionUser, courseId: strin
               id: true,
               firstName: true,
               lastName: true,
+              nameAr: true,
+              nameHe: true,
               email: true,
+              isActive: true,
               hardwareBadgeId: true,
               studentProfile: { select: { cohort: true } },
             },

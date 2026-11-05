@@ -5,7 +5,7 @@ import { loadCourseForSession } from "@/lib/access";
 import { activeStudentWhere } from "@/lib/cohort";
 import { getLocale, requirePermission, requireUser } from "@/lib/auth";
 import { asNumber, formatDateTime } from "@/lib/format";
-import { field, isEmail, lines, optional } from "@/lib/form";
+import { field, isEmail, isUniqueConflict, lines, optional } from "@/lib/form";
 import { fill, getDictionary } from "@/lib/i18n";
 import { hasPermission } from "@/lib/permissions";
 import { notifyUsers, recipientIdsForAudience } from "@/lib/notifications";
@@ -23,27 +23,81 @@ async function editableCourse(courseId: string) {
   return { session, access, canManage, canTeach };
 }
 
+function courseDate(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
 export async function createCourseAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requirePermission("manage_courses");
   const dict = getDictionary(await getLocale());
   const code = field(formData, "code").toUpperCase();
   const title = field(formData, "title");
+  const startDate = courseDate(optional(formData, "startDate"));
+  const endDate = courseDate(optional(formData, "endDate"));
   if (!code || !title) return { error: dict.errors.invalid };
+  if (startDate && endDate && endDate < startDate) return { error: dict.courses.dateOrder };
+  const requestedIds = [...new Set(formData.getAll("studentIds").map(String).filter(Boolean))];
+  const db = getPrisma();
+  const students = requestedIds.length
+    ? await db.user.findMany({ where: { id: { in: requestedIds }, ...activeStudentWhere() }, select: { id: true } })
+    : [];
   try {
-    await getPrisma().course.create({
-      data: { code, title, description: optional(formData, "description") },
+    await db.course.create({
+      data: {
+        code,
+        title,
+        description: optional(formData, "description"),
+        startDate,
+        endDate,
+        ...(students.length ? { enrollments: { create: students.map((student) => ({ userId: student.id })) } } : {}),
+      },
     });
-  } catch {
+  } catch (error) {
+    if (isUniqueConflict(error)) return { error: dict.courses.codeTaken };
     return { error: dict.errors.invalid };
   }
   revalidatePath("/courses");
   return { success: dict.common.saved };
 }
 
+export async function updateCourseAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const dict = getDictionary(await getLocale());
+  const courseId = field(formData, "id");
+  const context = await editableCourse(courseId);
+  if (!context?.canTeach) return { error: dict.errors.forbidden };
+  const title = field(formData, "title");
+  const startDate = courseDate(optional(formData, "startDate"));
+  const endDate = courseDate(optional(formData, "endDate"));
+  if (!title) return { error: dict.errors.invalid };
+  if (startDate && endDate && endDate < startDate) return { error: dict.courses.dateOrder };
+  const code = field(formData, "code").toUpperCase();
+  if (context.canManage && !code) return { error: dict.errors.invalid };
+  try {
+    await getPrisma().course.update({
+      where: { id: courseId },
+      data: {
+        title,
+        description: optional(formData, "description"),
+        startDate,
+        endDate,
+        ...(context.canManage ? { code, isActive: field(formData, "isActive") !== "0" } : {}),
+      },
+    });
+  } catch (error) {
+    if (isUniqueConflict(error)) return { error: dict.courses.codeTaken };
+    return { error: dict.errors.generic };
+  }
+  revalidatePath("/courses");
+  revalidatePath(`/courses/${courseId}`);
+  return { success: dict.common.saved };
+}
+
 export async function saveRosterAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  await requirePermission("manage_courses");
   const dict = getDictionary(await getLocale());
   const courseId = field(formData, "courseId");
+  const context = await editableCourse(courseId);
+  if (!context?.canTeach) return { error: dict.errors.forbidden };
   const teacherIds = formData.getAll("teacherIds").map(String);
   const studentIds = new Set(formData.getAll("studentIds").map(String));
   const emails = lines(field(formData, "emails")).filter(isEmail);
@@ -87,18 +141,31 @@ export async function createPostAction(_prev: ActionState, formData: FormData): 
   if (!body) return { error: dict.errors.invalid };
   const link = optional(formData, "linkUrl");
   if (link && !safeHttpUrl(link)) return { error: dict.errors.invalid };
+  const title = optional(formData, "title");
   await getPrisma().coursePost.create({
     data: {
       courseId,
       authorId: context.session.id,
-      title: optional(formData, "title"),
+      title,
       body,
       linkUrl: link,
       isPinned: formData.get("isPinned") === "on",
       allowComments: formData.get("allowComments") === "on",
     },
   });
+  const recipients = await recipientIdsForAudience("COURSE", { courseId });
+  await notifyUsers({
+    recipientIds: recipients,
+    title: title || body.slice(0, 80),
+    body,
+    audience: "COURSE",
+    courseId,
+    createdById: context.session.id,
+    linkUrl: `/courses/${courseId}?tab=announcements`,
+    priority: "IMPORTANT",
+  });
   revalidatePath(`/courses/${courseId}`);
+  revalidatePath("/notifications");
   return { success: dict.common.saved };
 }
 
@@ -233,4 +300,37 @@ export async function broadcastCourseAction(_prev: ActionState, formData: FormDa
   });
   revalidatePath("/notifications");
   return { success: dict.courses.sent };
+}
+
+async function canJoinCourse(courseId: string) {
+  const session = await requireUser();
+  const access = await loadCourseForSession(session, courseId);
+  if (!access || (!access.isEnrolled && !access.isTeacher && !access.isManager)) return null;
+  return { session, access };
+}
+
+export async function askCourseQuestionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const dict = getDictionary(await getLocale());
+  const courseId = field(formData, "courseId");
+  const body = field(formData, "body");
+  const context = await canJoinCourse(courseId);
+  if (!context) return { error: dict.errors.forbidden };
+  if (!body) return { error: dict.errors.invalid };
+  await getPrisma().courseQuestion.create({ data: { courseId, authorId: context.session.id, body } });
+  revalidatePath(`/courses/${courseId}`);
+  return { success: dict.common.saved };
+}
+
+export async function answerCourseQuestionAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const dict = getDictionary(await getLocale());
+  const questionId = field(formData, "questionId");
+  const body = field(formData, "body");
+  if (!questionId || !body) return { error: dict.errors.invalid };
+  const question = await getPrisma().courseQuestion.findUnique({ where: { id: questionId }, select: { courseId: true } });
+  if (!question) return { error: dict.errors.invalid };
+  const context = await canJoinCourse(question.courseId);
+  if (!context) return { error: dict.errors.forbidden };
+  await getPrisma().courseAnswer.create({ data: { questionId, authorId: context.session.id, body } });
+  revalidatePath(`/courses/${question.courseId}`);
+  return { success: dict.common.saved };
 }

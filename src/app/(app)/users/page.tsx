@@ -1,112 +1,109 @@
-import Link from "next/link";
-import { Ltr } from "@/components/ltr";
-import { ActionForm, SubmitButton } from "@/components/form";
 import { PageHeader } from "@/components/page-header";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { AccountEditor } from "@/components/students/account-editor";
 import { SeedAccountsButton } from "@/components/users/seed-accounts-button";
-import { createUserAction } from "@/server/actions/people";
+import { UsersConsole } from "@/components/users/users-console";
 import { getLocale, requirePermission } from "@/lib/auth";
+import type { Locale } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
-import { fullName } from "@/lib/utils";
 
 export default async function UsersPage() {
-  await requirePermission("manage_users_and_roles");
-  const dict = getDictionary(await getLocale());
-  const [users, roles] = await Promise.all([
-    getPrisma().user.findMany({
-      include: { roles: { include: { role: true } }, studentProfile: true },
+  const session = await requirePermission("manage_users_and_roles");
+  const locale = (await getLocale()) as Locale;
+  const dict = getDictionary(locale);
+  const db = getPrisma();
+  const [users, roles, courses] = await Promise.all([
+    db.user.findMany({
+      include: {
+        roles: { include: { role: true } },
+        studentProfile: { select: { nationalId: true, cohort: true, nameAr: true, nameHe: true } },
+        enrollments: { select: { courseId: true } },
+      },
       orderBy: { firstName: "asc" },
     }),
-    getPrisma().role.findMany({ orderBy: { name: "asc" } }),
+    db.role.findMany({ orderBy: { name: "asc" }, select: { id: true, slug: true, name: true } }),
+    db.course.findMany({ orderBy: { code: "asc" }, select: { id: true, code: true, title: true } }),
   ]);
 
   return (
     <div>
-      <PageHeader title={dict.users.title} description={dict.users.subtitle} action={<SeedAccountsButton label={dict.users.seedAccounts} pendingLabel={dict.common.saving} done={dict.users.seedDone} />} />
-      <div className="grid gap-4 xl:grid-cols-[340px_1fr]">
-        <ActionForm action={createUserAction} className="grid h-fit gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4">
-          <h2 className="font-semibold">{dict.users.createTitle}</h2>
-          <Input name="firstName" placeholder={dict.users.firstName} required />
-          <Input name="lastName" placeholder={dict.users.lastName} required />
-          <Input name="email" type="email" placeholder={dict.common.email} required />
-          <Input name="phone" placeholder={dict.common.phone} />
-          <Input name="password" type="password" placeholder={dict.users.password} minLength={8} required />
-          <Input name="hardwareBadgeId" placeholder={dict.users.badge} />
-          <Input name="terminalPin" placeholder={dict.users.pin} />
-          <fieldset className="grid gap-2">
-            <legend className="text-sm font-medium">{dict.users.roles}</legend>
-            {roles.map((role) => (
-              <label key={role.id} className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="roleIds" value={role.id} />
-                {role.name}
-              </label>
-            ))}
-          </fieldset>
-          <fieldset className="grid gap-2">
-            <legend className="text-sm font-medium">{dict.users.studentSection}</legend>
-            <Input name="academicTrack" placeholder={dict.students.track} />
-            <Input name="nationalId" placeholder={dict.students.nationalId} />
-            <Input name="city" placeholder={dict.students.city} />
-            <Input name="defaultStipendAmount" type="number" min={0} step="0.01" placeholder={dict.students.defaultStipend} />
-          </fieldset>
-          <SubmitButton label={dict.common.create} pendingLabel={dict.common.saving} />
-        </ActionForm>
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200/80 bg-card shadow-sm md:hidden">
-          {users.map((user) => (
-            <li key={user.id} className="px-3 py-2.5">
-              <div className="flex items-start justify-between gap-2">
-                <Link href={`/users/${user.id}`} className="min-w-0 font-medium">{fullName(user)}</Link>
-                <Badge tone={user.isActive ? "ATTENDED" : "CANCELLED"}>{user.isActive ? dict.common.active : dict.common.inactive}</Badge>
-              </div>
-              <p className="truncate text-xs text-muted-foreground"><Ltr>{user.email}</Ltr></p>
-              <p className="mt-1 truncate text-xs text-slate-600">{user.roles.map((entry) => entry.role.name).join(", ") || "—"}</p>
-              <p className="text-xs text-muted-foreground"><Ltr>{user.hardwareBadgeId || "—"}</Ltr> · <Ltr>{user.phone || "—"}</Ltr> · <Ltr>{user.studentProfile?.nationalId || "—"}</Ltr></p>
-              {user.studentProfile ? <AccountEditor account={{ id: user.id, email: user.email, phone: user.phone, nationalId: user.studentProfile.nationalId, bankName: user.studentProfile.bankName, bankBranch: user.studentProfile.bankBranch, bankAccount: user.studentProfile.bankAccountNumber, bankConfirmed: user.studentProfile.hasBankConfirmation }} editLabel={dict.users.viewEdit} resetLabel={dict.users.resetPassword} saveLabel={dict.common.save} savingLabel={dict.common.saving} closeLabel={dict.attendance.close} emailLabel={dict.common.email} phoneLabel={dict.common.phone} bankLabel={dict.students.bankName} branchLabel={dict.students.bankBranch} accountLabel={dict.students.bankAccount} confirmationLabel={dict.students.bankConfirmation} /> : null}
-            </li>
-          ))}
-        </ul>
-        <div className="hidden min-w-0 overflow-x-auto rounded-2xl border border-slate-200/80 bg-card shadow-sm md:block">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead className="text-start text-muted-foreground">
-              <tr className="border-b">
-                <th className="px-4 py-3 text-start font-medium">{dict.common.name}</th>
-                <th className="px-4 py-3 text-start font-medium">{dict.users.roles}</th>
-                <th className="px-4 py-3 text-start font-medium">{dict.users.badge}</th>
-                <th className="px-4 py-3 text-start font-medium">{dict.common.phone}</th>
-                <th className="px-4 py-3 text-start font-medium">{dict.students.nationalId}</th>
-                <th className="px-4 py-3 text-start font-medium">{dict.students.bankName}</th>
-                <th className="px-4 py-3 text-start font-medium">{dict.common.status}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">
-                    <Link href={`/users/${user.id}`} className="font-medium hover:underline">
-                      {fullName(user)}
-                    </Link>
-                    <p className="text-xs text-muted-foreground"><Ltr>{user.email}</Ltr></p>
-                  </td>
-                  <td className="px-4 py-3">{user.roles.map((entry) => entry.role.name).join(", ")}</td>
-                  <td className="px-4 py-3"><Ltr>{user.hardwareBadgeId || "—"}</Ltr></td>
-                  <td className="px-4 py-3"><Ltr>{user.phone || "—"}</Ltr></td>
-                  <td className="px-4 py-3"><Ltr>{user.studentProfile?.nationalId || "—"}</Ltr></td>
-                  <td className="px-4 py-3">
-                    <Ltr>{[user.studentProfile?.bankName, user.studentProfile?.bankBranch, user.studentProfile?.bankAccountNumber].filter(Boolean).join(" · ") || "—"}</Ltr>
-                    {user.studentProfile ? <AccountEditor account={{ id: user.id, email: user.email, phone: user.phone, nationalId: user.studentProfile.nationalId, bankName: user.studentProfile.bankName, bankBranch: user.studentProfile.bankBranch, bankAccount: user.studentProfile.bankAccountNumber, bankConfirmed: user.studentProfile.hasBankConfirmation }} editLabel={dict.users.viewEdit} resetLabel={dict.users.resetPassword} saveLabel={dict.common.save} savingLabel={dict.common.saving} closeLabel={dict.attendance.close} emailLabel={dict.common.email} phoneLabel={dict.common.phone} bankLabel={dict.students.bankName} branchLabel={dict.students.bankBranch} accountLabel={dict.students.bankAccount} confirmationLabel={dict.students.bankConfirmation} /> : null}
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge tone={user.isActive ? "ATTENDED" : "CANCELLED"}>{user.isActive ? dict.common.active : dict.common.inactive}</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <PageHeader
+        title={dict.users.title}
+        description={dict.users.subtitle}
+        action={<SeedAccountsButton label={dict.users.seedAccounts} pendingLabel={dict.common.saving} done={dict.users.seedDone} />}
+      />
+      <UsersConsole
+        locale={locale}
+        currentUserId={session.id}
+        roles={roles}
+        courses={courses}
+        users={users.map((user) => ({
+          id: user.id,
+          email: user.email,
+          phone: user.phone,
+          loginPassword: user.loginPassword,
+          isActive: user.isActive,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          nameAr: user.nameAr || user.studentProfile?.nameAr || null,
+          nameHe: user.nameHe || user.studentProfile?.nameHe || null,
+          nationalId: user.studentProfile?.nationalId ?? null,
+          cohort: user.studentProfile?.cohort ?? null,
+          hardwareBadgeId: user.hardwareBadgeId,
+          roles: user.roles.map((entry) => ({ id: entry.role.id, slug: entry.role.slug, name: entry.role.name })),
+          courseIds: user.enrollments.map((entry) => entry.courseId),
+        }))}
+        labels={{
+          addButton: dict.users.addButton,
+          editUser: dict.users.editUser,
+          createTitle: dict.users.createTitle,
+          kpiActive: dict.users.kpiActive,
+          kpiManagers: dict.users.kpiManagers,
+          kpiTeachers: dict.users.kpiTeachers,
+          kpiStudents: dict.users.kpiStudents,
+          kpiCohort: dict.users.kpiCohort,
+          filterAll: dict.users.filterAll,
+          filterManagers: dict.users.filterManagers,
+          filterTeachers: dict.users.filterTeachers,
+          filterStudents: dict.users.filterStudents,
+          filterArchived: dict.users.filterArchived,
+          search: dict.users.search,
+          nameAr: dict.users.nameAr,
+          nameHe: dict.users.nameHe,
+          email: dict.common.email,
+          nationalId: dict.students.nationalId,
+          phone: dict.common.phone,
+          password: dict.users.password,
+          passwordHint: dict.users.passwordHint,
+          passwordStudentHint: dict.users.passwordStudentHint,
+          primaryRole: dict.users.primaryRole,
+          roleManager: dict.users.roleManager,
+          roleTeacher: dict.users.roleTeacher,
+          roleStudent: dict.users.roleStudent,
+          extraRoles: dict.users.extraRoles,
+          linkCourses: dict.users.linkCourses,
+          cohort: dict.students.cohort,
+          accountState: dict.users.accountState,
+          active: dict.common.active,
+          archived: dict.users.archived,
+          archive: dict.users.archive,
+          restore: dict.users.restore,
+          archiveConfirm: dict.users.archiveConfirm,
+          restoreConfirm: dict.users.restoreConfirm,
+          status: dict.common.status,
+          actions: dict.common.actions,
+          user: dict.common.name,
+          contact: dict.users.contact,
+          close: dict.attendance.close,
+          save: dict.common.save,
+          create: dict.common.create,
+          saving: dict.common.saving,
+          deleteAccount: dict.users.deleteAccount,
+          deleteConfirm: dict.users.deleteConfirm,
+          noResults: dict.users.noResults,
+          fullProfile: dict.users.fullProfile,
+          passwordReset: dict.users.passwordReset,
+        }}
+      />
     </div>
   );
 }

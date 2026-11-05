@@ -13,6 +13,11 @@ import type { ActionState } from "@/lib/types";
 
 const STATUSES = new Set(["ATTENDED", "LATE", "ABSENT", "EXCUSED"]);
 
+function refreshAttendance(courseId: string | null) {
+  revalidatePath("/attendance");
+  if (courseId) revalidatePath(`/courses/${courseId}`);
+}
+
 export async function saveAttendanceStatusAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const session = await requirePermission("manage_attendance");
   const dict = getDictionary(await getLocale());
@@ -45,7 +50,7 @@ export async function saveAttendanceStatusAction(_prev: ActionState, formData: F
       recordedById: session.id,
     },
   });
-  revalidatePath("/attendance");
+  refreshAttendance(courseId);
   return { success: dict.common.saved };
 }
 
@@ -99,7 +104,7 @@ export async function saveAttendanceTimesAction(_prev: ActionState, formData: Fo
       recordedById: session.id,
     },
   });
-  revalidatePath("/attendance");
+  refreshAttendance(courseId);
   return { success: dict.common.saved };
 }
 
@@ -120,7 +125,7 @@ export async function clearAttendanceTimesAction(_prev: ActionState, formData: F
     where: { userId, date: day, courseScope: courseId ?? "none" },
     data: { checkInTime: null, checkOutTime: null, totalMinutes: null, minutesLate: null },
   });
-  revalidatePath("/attendance");
+  refreshAttendance(courseId);
   return { success: dict.common.saved };
 }
 
@@ -165,7 +170,7 @@ export async function markAllAttendedAction(_prev: ActionState, formData: FormDa
       }),
     ),
   );
-  revalidatePath("/attendance");
+  refreshAttendance(courseId);
   return { success: String(allowed.length) };
 }
 

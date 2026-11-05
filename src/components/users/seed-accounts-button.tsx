@@ -25,7 +25,7 @@ export function SeedAccountsButton({ label, pendingLabel, done }: { label: strin
 
   return (
     <div className="grid gap-2">
-      <Button type="button" onClick={run} disabled={pending}>{pending ? pendingLabel : label}</Button>
+      <Button type="button" variant="outline" size="sm" onClick={run} disabled={pending}>{pending ? pendingLabel : label}</Button>
       {note ? <p className="text-sm text-slate-600">{note}</p> : null}
     </div>
   );

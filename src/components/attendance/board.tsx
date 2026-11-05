@@ -147,6 +147,8 @@ export function AttendanceBoard({
   graceMinutes,
   timeZone,
   labels,
+  pathname = "/attendance",
+  hideCourseSelect = false,
 }: {
   students: AttendanceStudent[];
   courses: { id: string; title: string }[];
@@ -156,6 +158,8 @@ export function AttendanceBoard({
   graceMinutes: number;
   timeZone: string;
   labels: AttendanceLabels;
+  pathname?: string;
+  hideCourseSelect?: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(students);
@@ -189,10 +193,15 @@ export function AttendanceBoard({
 
   function visit(next: { date?: string; courseId?: string }) {
     const params = new URLSearchParams();
-    params.set("date", next.date ?? date);
-    const course = next.courseId ?? courseId;
-    if (course) params.set("courseId", course);
-    startTransition(() => router.push(`/attendance?${params.toString()}`));
+    if (pathname.startsWith("/courses/")) {
+      params.set("tab", "attendance");
+      params.set("date", next.date ?? date);
+    } else {
+      params.set("date", next.date ?? date);
+      const course = next.courseId ?? courseId;
+      if (course) params.set("courseId", course);
+    }
+    startTransition(() => router.push(`${pathname}?${params.toString()}`));
   }
 
   const visible = useMemo(() => {
@@ -269,15 +278,17 @@ export function AttendanceBoard({
             <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
             <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.search} className="h-9 ps-9" />
           </label>
-          <label className="min-w-0 lg:w-56">
-            <span className="sr-only">{labels.course}</span>
-            <Select value={courseId} onChange={(event) => visit({ courseId: event.target.value })} className="h-9">
-              <option value="">{labels.allStudents}</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>{course.title}</option>
-              ))}
-            </Select>
-          </label>
+          {hideCourseSelect ? null : (
+            <label className="min-w-0 lg:w-56">
+              <span className="sr-only">{labels.course}</span>
+              <Select value={courseId} onChange={(event) => visit({ courseId: event.target.value })} className="h-9">
+                <option value="">{labels.allStudents}</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>{course.title}</option>
+                ))}
+              </Select>
+            </label>
+          )}
           <div className="flex min-w-0 flex-wrap items-center gap-1">
             <button type="button" onClick={() => visit({ date: shiftIso(date, -1) })} className="inline-flex h-9 items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50">
               <ChevronLeft className="size-3.5 rtl:rotate-180" />
