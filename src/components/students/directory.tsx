@@ -254,7 +254,6 @@ export function StudentsDirectory({
           <thead className="bg-slate-50 text-xs text-slate-500">
             <tr className="h-9">
               <th className="sticky start-0 z-10 border-e border-slate-200 bg-slate-50 px-3 text-start font-medium">{labels.name}</th>
-              <th className="px-3 text-start font-medium">{labels.badge}</th>
               <th className="px-3 text-start font-medium">{labels.phone}</th>
               <th className="px-3 text-start font-medium">{labels.nationalId}</th>
               <th className="px-3 text-start font-medium">{labels.bank}</th>
@@ -279,7 +278,6 @@ export function StudentsDirectory({
                       </span>
                     </button>
                   </td>
-                  <td className="px-3"><Ltr>{student.badge || "—"}</Ltr></td>
                   <td className="px-3"><Ltr>{student.phone || "—"}</Ltr></td>
                   <td className="px-3"><Ltr>{student.nationalId || "—"}</Ltr></td>
                   <td className="max-w-[12rem] px-3 text-xs text-slate-600"><Ltr>{[student.bankName, student.bankBranch, student.bankAccount].filter(Boolean).join(" · ") || (student.bankConfirmed ? labels.bankYes : labels.bankNo)}</Ltr></td>
