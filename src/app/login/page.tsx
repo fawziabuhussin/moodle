@@ -8,13 +8,6 @@ import { setLocaleAction } from "@/server/actions/auth";
 
 export const dynamic = "force-dynamic";
 
-const PILLARS = [
-  "👥 إرشاد شخصي ومتابعة لكل طالب على مدار السنة",
-  "📚 إدارة المساقات والחضور والفعاليات التعليمية",
-  "💡 تطوير المهارات القيادية والشخصية للشباب",
-  "🟢 متابعة اللجان والجلسات والبرامج المجتمعية",
-];
-
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const locale = (await getLocale()) as Locale;
   const dict = getDictionary(locale);
@@ -70,16 +63,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <p className="text-sm font-medium text-orange-400">جت المثلث - مركز شبابي</p>
           </div>
         </div>
-        <div className="mt-3 grid gap-2 lg:mt-0 lg:gap-4" dir="rtl">
-          <p className="font-arabic text-sm leading-6 text-slate-100 lg:text-2xl lg:leading-snug">مركز شبابي مجتمعي غير ربحي - جت المثلث</p>
-          <ul className="grid gap-1 rounded-2xl border border-white/15 bg-white/10 p-2.5 shadow-md backdrop-blur-sm lg:gap-3 lg:p-5">
-            {PILLARS.map((pillar) => (
-              <li key={pillar} className="font-arabic text-[13px] leading-5 text-slate-50 lg:text-base lg:leading-6">
-                {pillar}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <p className="mt-3 font-arabic text-sm leading-6 text-slate-100 lg:mt-0 lg:text-2xl lg:leading-snug" dir="rtl">مركز شبابي مجتمعي غير ربحي - جت المثلث</p>
       </section>
     </main>
   );
