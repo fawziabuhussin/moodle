@@ -575,22 +575,40 @@ model Restaurant {
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   items     MenuItem[]
+  menus     FoodMenu[]
   polls     FoodPoll[]
+}
+
+model FoodMenu {
+  id           String     @id @default(cuid())
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  name         String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  items        MenuItem[]
+  polls        FoodPoll[]
+
+  @@index([restaurantId])
 }
 
 model MenuItem {
   id           String         @id @default(cuid())
   restaurantId String
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  menuId       String?
+  menu         FoodMenu?      @relation(fields: [menuId], references: [id], onDelete: SetNull)
   name         String
   category     String         @default("")
   basePrice    Decimal        @default(0) @db.Decimal(10, 2)
   emoji        String         @default("🍽️")
   sortOrder    Int            @default(0)
+  available    Boolean        @default(true)
   additions    MenuAddition[]
   orders       FoodOrder[]
 
   @@index([restaurantId])
+  @@index([menuId])
 }
 
 model MenuAddition {
@@ -610,6 +628,9 @@ model FoodPoll {
   id           String         @id @default(cuid())
   restaurantId String
   restaurant   Restaurant     @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  menuId       String?
+  menu         FoodMenu?      @relation(fields: [menuId], references: [id], onDelete: SetNull)
+  price        Decimal?       @db.Decimal(10, 2)
   status       FoodPollStatus @default(OPEN)
   openedAt     DateTime       @default(now())
   closesAt     DateTime
@@ -618,6 +639,7 @@ model FoodPoll {
   orders       FoodOrder[]
 
   @@index([status, closesAt])
+  @@index([menuId])
 }
 
 model FoodOrder {

@@ -4,27 +4,27 @@ import { PERMISSIONS } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
 
 const RESTAURANT_NAME = "המטבח / مطعم المعهد";
+export const DEFAULT_MENU_NAME = "القائمة";
 
-const ADDITIONS = [
-  { name: "צ'יפס בצד / بطاطا عجنب", emoji: "🍟" },
-  { name: "חמוצים / مخلل", emoji: "🥒" },
-  { name: "כרוב לבן / ملفوف أبيض", emoji: "🥬" },
-  { name: "חומוס / حمص", emoji: "🫘" },
-  { name: "תירס / ذرة", emoji: "🌽" },
-  { name: "זיתים / زيتون", emoji: "🫒" },
-  { name: "טונה / تونة", emoji: "🐟" },
-  { name: "פטריות / فطر", emoji: "🍄" },
-  { name: "לחמניה שחורה / لحمنيا سوداء", emoji: "🍞" },
-  { name: "צ'ילי מתוק / تشيلي", emoji: "🌶️" },
+const DISHES = [
+  { name: "ساندويشه بستراما", emoji: "🥪" },
+  { name: "ساندويشه جبنه صفراء", emoji: "🧀" },
+  { name: "ساندويشه نقانق", emoji: "🌭" },
+  { name: "ساندويشه جبنه حلومي", emoji: "🧀" },
+  { name: "توست", emoji: "🥪" },
+  { name: "ساندويشه صدر دجاج", emoji: "🍗" },
+  { name: "ساندويشه شنيتسل", emoji: "🍗" },
+  { name: "ساندويشه كباب", emoji: "🥙" },
+  { name: "طابون زعتر شخصي", emoji: "🫓" },
+  { name: "بيتسا شخصيه", emoji: "🍕" },
+  { name: "سلطه صدر دجاج", emoji: "🥗" },
+  { name: "سلطه تونا", emoji: "🥗" },
+  { name: "مشولاش", emoji: "🥐" },
 ] as const;
 
-const ITEMS = [
-  { name: "שניצל / شنيتسل", emoji: "🍗", category: "main" },
-  { name: "חזה עוף / صدر دجاج", emoji: "🍖", category: "main" },
-  { name: "פיצה אישית / بيتسا شخصية", emoji: "🍕", category: "main" },
-  { name: "טוסט / توست", emoji: "🥪", category: "main" },
-  { name: "כריך גבינה / ساندويشة جبنة حلومي", emoji: "🧀", category: "main" },
-] as const;
+export function dishEmoji(name: string) {
+  return DISHES.find((dish) => dish.name === name)?.emoji ?? "🍽️";
+}
 
 export async function ensureFoodMenu() {
   const db = getPrisma();
@@ -33,34 +33,29 @@ export async function ensureFoodMenu() {
     data: { permissions: [...PERMISSIONS] },
   });
 
-  const existing = await db.restaurant.findFirst({
-    where: { name: RESTAURANT_NAME },
-    include: { items: { include: { additions: true }, orderBy: { sortOrder: "asc" } } },
-  });
-  if (existing && existing.items.length > 0) return existing;
+  const restaurant = await db.restaurant.findFirst({ where: { name: RESTAURANT_NAME } })
+    ?? await db.restaurant.create({ data: { name: RESTAURANT_NAME, logoIcon: "🍽️", isActive: true } });
 
-  return db.restaurant.create({
-    data: {
-      name: RESTAURANT_NAME,
-      logoIcon: "🍽️",
-      isActive: true,
-      items: {
-        create: ITEMS.map((item, index) => ({
-          name: item.name,
-          emoji: item.emoji,
-          category: item.category,
-          sortOrder: index,
-          additions: {
-            create: ADDITIONS.map((addition, additionIndex) => ({
-              name: addition.name,
-              emoji: addition.emoji,
-              isDefault: false,
-              sortOrder: additionIndex,
-            })),
-          },
-        })),
-      },
-    },
-    include: { items: { include: { additions: true }, orderBy: { sortOrder: "asc" } } },
+  const menu = await db.foodMenu.findFirst({ where: { restaurantId: restaurant.id, name: DEFAULT_MENU_NAME } })
+    ?? await db.foodMenu.create({ data: { restaurantId: restaurant.id, name: DEFAULT_MENU_NAME } });
+
+  const saved = await db.menuItem.count({ where: { menuId: menu.id, available: true } });
+  if (saved === 0) {
+    await db.menuItem.createMany({
+      data: DISHES.map((dish, index) => ({
+        restaurantId: restaurant.id,
+        menuId: menu.id,
+        name: dish.name,
+        emoji: dish.emoji,
+        category: "main",
+        sortOrder: index,
+      })),
+    });
+  }
+
+  await db.menuItem.deleteMany({
+    where: { restaurantId: restaurant.id, menuId: null, orders: { none: {} } },
   });
+
+  return restaurant;
 }

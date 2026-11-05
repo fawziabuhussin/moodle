@@ -53,7 +53,7 @@ export function SideNav({ links, sections }: { links: ShellLink[]; sections: Rec
   const pathname = usePathname();
   let previous = "";
   return (
-    <nav className="grid gap-0.5 overflow-y-auto">
+    <nav className="grid min-h-0 flex-1 content-start gap-0.5 overflow-y-auto">
       {links.map((link) => {
         const Icon = icons[link.icon];
         const on = active(pathname, link.href);

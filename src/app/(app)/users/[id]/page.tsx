@@ -116,7 +116,7 @@ export default async function EditUserPage({ params }: { params: Promise<{ id: s
         <SubmitButton label={dict.common.save} pendingLabel={dict.common.saving} />
       </ActionForm>
       <div className="mt-3 flex justify-end">
-        <DeleteUserButton id={user.id} label={dict.users.deleteAccount} pendingLabel={dict.common.saving} confirmLabel={dict.users.deleteConfirm} />
+        <DeleteUserButton id={user.id} name={fullName(user)} detail={user.nameAr && user.nameAr !== fullName(user) ? user.nameAr : null} label={dict.users.deleteAccount} pendingLabel={dict.common.saving} confirmLabel={dict.users.deleteConfirm} cancelLabel={dict.common.cancel} />
       </div>
     </div>
   );

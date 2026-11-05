@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell } from "lucide-react";
+import { Bell, LogOut } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand";
@@ -62,17 +62,20 @@ export function ShellHeader({
             </span>
           ) : null}
         </Link>
-        <div className="hidden items-center gap-2 sm:flex">
+        <div className="hidden min-w-0 items-center gap-2 lg:flex">
           <Avatar>
             <AvatarFallback>{initials(user)}</AvatarFallback>
           </Avatar>
-          <div className="leading-tight">
-            <p className="text-sm font-medium">{`${user.firstName} ${user.lastName}`.trim()}</p>
-            <p className="text-xs text-slate-300">{user.roleNames.join(" · ")}</p>
+          <div className="min-w-0 leading-tight">
+            <p className="truncate text-sm font-medium">{`${user.firstName} ${user.lastName}`.trim()}</p>
+            <p className="truncate text-xs text-slate-300">{user.roleNames.join(" · ")}</p>
           </div>
         </div>
-        <form action={logoutAction} className="hidden md:block">
-          <button className="rounded-xl px-3 py-2 text-sm text-slate-200 hover:bg-white/10">{logoutLabel}</button>
+        <form action={logoutAction} className="shrink-0">
+          <button className="grid size-10 place-items-center rounded-xl text-slate-200 hover:bg-white/10 md:flex md:h-10 md:w-auto md:items-center md:gap-1.5 md:px-3" aria-label={logoutLabel}>
+            <LogOut className="size-4 md:hidden" />
+            <span className="hidden md:inline">{logoutLabel}</span>
+          </button>
         </form>
       </div>
     </header>

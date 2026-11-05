@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { logoutAction } from "@/server/actions/auth";
 import { BrandMark } from "@/components/brand";
 import { PageTitleProvider } from "@/components/shell/page-title";
 import { ShellHeader } from "@/components/shell/shell-header";
@@ -36,6 +37,9 @@ export function AppShell({
             links={links}
             sections={flat ? { academic: "", admin: "", system: "" } : { academic: dict.nav.academic, admin: dict.nav.administration, system: dict.nav.system }}
           />
+          <form action={logoutAction} className="mt-3 border-t border-white/10 pt-3">
+            <button className="flex min-h-11 w-full items-center justify-center rounded-xl text-sm font-medium text-slate-200 hover:bg-white/10">{dict.nav.logout}</button>
+          </form>
         </aside>
         <div className="min-w-0 md:ps-72">
           <ShellHeader

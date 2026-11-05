@@ -194,6 +194,7 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           edit: dict.common.edit,
           remove: dict.users.deleteAccount,
           confirmDelete: dict.users.deleteConfirm,
+          cancel: dict.common.cancel,
           nameAr: dict.students.nameAr,
           passwordHint: dict.users.passwordHint,
           statuses: {

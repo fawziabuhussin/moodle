@@ -96,10 +96,20 @@ export type DirectoryLabels = {
   edit: string;
   remove: string;
   confirmDelete: string;
+  cancel: string;
   nameAr: string;
   passwordHint: string;
   statuses: Record<"PENDING" | "APPROVED" | "PAID" | "CANCELLED", string>;
 };
+
+function LabeledField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="grid gap-1.5 text-start text-xs font-medium text-slate-600">
+      {label}
+      {children}
+    </label>
+  );
+}
 
 function Fact({ label, value }: { label: string; value: ReactNode }) {
   return (
@@ -155,6 +165,7 @@ export function StudentsDirectory({
   const [toast, setToast] = useState<string | null>(null);
   const [profile, setProfile] = useState<DirectoryStudent | null>(null);
   const [editing, setEditing] = useState<DirectoryStudent | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<DirectoryStudent | null>(null);
   const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -223,8 +234,9 @@ export function StudentsDirectory({
     router.refresh();
   }
 
-  async function removeStudent(student: DirectoryStudent) {
-    if (!canManage || !window.confirm(labels.confirmDelete)) return;
+  async function removeStudent() {
+    if (!canManage || !pendingDelete) return;
+    const student = pendingDelete;
     setBusyId(student.id);
     const data = new FormData();
     data.set("id", student.id);
@@ -234,7 +246,9 @@ export function StudentsDirectory({
       notify(result.error);
       return;
     }
+    setPendingDelete(null);
     if (profile?.id === student.id) setProfile(null);
+    if (editing?.id === student.id) setEditing(null);
     notify(labels.saved);
     router.refresh();
   }
@@ -276,7 +290,7 @@ export function StudentsDirectory({
         </Link>
       </div>
       {archive ? <p className="mb-3 text-sm text-slate-500">{labels.archiveNote}</p> : null}
-      <div className="sticky top-16 z-20 -mx-4 mb-3 flex flex-col gap-2 border-b border-slate-200/80 bg-slate-50/95 px-4 py-2 backdrop-blur md:-mx-8 md:flex-row md:items-center md:px-8">
+      <div className="z-20 -mx-4 mb-3 flex flex-col gap-2 border-b border-slate-200/80 bg-slate-50 px-4 py-2 md:sticky md:top-16 md:-mx-8 md:flex-row md:items-center md:bg-slate-50/95 md:px-8 md:backdrop-blur">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={labels.search} className="ps-9" />
@@ -312,27 +326,97 @@ export function StudentsDirectory({
       {students.length === 0 ? <p className="text-sm text-muted-foreground">{labels.empty}</p> : null}
       {students.length > 0 && visible.length === 0 ? <p className="text-sm text-muted-foreground">{labels.noMatches}</p> : null}
 
-      <div className={cn("max-w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm", visible.length === 0 && "hidden")}>
-        <table className="w-full min-w-[760px] border-collapse text-sm">
+      <ul className={cn("grid gap-2 md:hidden", visible.length === 0 && "hidden")}>
+        {visible.map((student) => {
+          const tone = rateTone(student.attendancePercent);
+          return (
+            <li key={student.id} className={cn("rounded-2xl border border-slate-200 bg-white p-3 shadow-sm", !student.active && "bg-slate-50")}>
+              <div className="flex items-start gap-2">
+                <button type="button" onClick={() => setProfile(student)} className="flex min-w-0 flex-1 items-center gap-3 text-start">
+                  <span className="grid size-10 shrink-0 place-items-center rounded-full bg-sky-100 text-xs font-semibold text-sky-800">{initials(student)}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold text-slate-950">{fullName(student)}</span>
+                    {student.nameAr && student.nameAr !== fullName(student) ? <span className="block truncate text-xs text-slate-500">{student.nameAr}</span> : null}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  disabled={!canManage || busyId === student.id}
+                  onClick={() => toggleActive(student)}
+                  className={cn("shrink-0 rounded-full px-2 py-1 text-[11px] font-medium disabled:opacity-50", student.active ? "bg-lime-100 text-lime-800" : "bg-slate-200 text-slate-600")}
+                >
+                  {student.active ? labels.active : labels.inactive}
+                </button>
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div className="min-w-0">
+                  <dt className="text-slate-400">{labels.phone}</dt>
+                  <dd className="font-medium text-slate-800"><Ltr>{student.phone || "—"}</Ltr></dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-slate-400">{labels.nationalId}</dt>
+                  <dd className="font-medium text-slate-800"><Ltr>{student.nationalId || "—"}</Ltr></dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-slate-400">{labels.track}</dt>
+                  <dd className="truncate font-medium text-slate-800">{student.track || "—"}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-slate-400">{labels.attendance}</dt>
+                  <dd><span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", tone.badge)}><Ltr>{student.attendanceLabel}</Ltr></span></dd>
+                </div>
+              </dl>
+              <div className="mt-3 flex items-center justify-between gap-2 text-xs">
+                {student.stipendStatus ? (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <Badge tone={student.stipendStatus}>{labels.statuses[student.stipendStatus]}</Badge>
+                    <Ltr className="truncate">{student.stipendLabel}</Ltr>
+                  </span>
+                ) : (
+                  <span className="text-slate-400">{labels.noStipend}</span>
+                )}
+              </div>
+              <div className={cn("mt-3 grid gap-1.5", canManage ? "grid-cols-3" : "grid-cols-1")}>
+                <button type="button" onClick={() => setProfile(student)} className="min-h-9 rounded-xl bg-sky-50 px-1 py-2 text-[11px] font-medium leading-tight text-primary">
+                  {labels.openProfile}
+                </button>
+                {canManage ? (
+                  <>
+                    <button type="button" onClick={() => { setEditError(null); setEditing(student); }} className="min-h-9 rounded-xl bg-slate-100 px-1 py-2 text-[11px] font-medium leading-tight text-slate-700">
+                      {labels.edit}
+                    </button>
+                    <button type="button" disabled={busyId === student.id} onClick={() => setPendingDelete(student)} className="min-h-9 rounded-xl bg-rose-50 px-1 py-2 text-[11px] font-medium leading-tight text-rose-700 disabled:opacity-50">
+                      {labels.remove}
+                    </button>
+                  </>
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className={cn("hidden max-w-full overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm md:block", visible.length === 0 && "md:hidden")}>
+        <table className="w-full min-w-[760px] border-separate border-spacing-0 text-sm">
           <thead className="bg-slate-50 text-xs text-slate-500">
             <tr className="h-9">
-              <th className="sticky start-0 z-10 border-e border-slate-200 bg-slate-50 px-3 text-start font-medium">{labels.name}</th>
-              <th className="px-3 text-start font-medium">{labels.phone}</th>
-              <th className="px-3 text-start font-medium">{labels.nationalId}</th>
-              <th className="px-3 text-start font-medium">{labels.bank}</th>
-              <th className="px-3 text-start font-medium">{labels.track}</th>
-              <th className="px-3 text-start font-medium">{labels.attendance}</th>
-              <th className="px-3 text-start font-medium">{labels.thisMonth}</th>
-              <th className="px-3 text-start font-medium">{labels.status}</th>
-              <th className="px-3 text-end font-medium">{labels.actions}</th>
+              <th className="sticky start-0 z-10 border-b border-e border-slate-200 bg-slate-50 px-3 text-start font-medium">{labels.name}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.phone}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.nationalId}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.bank}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.track}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.attendance}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.thisMonth}</th>
+              <th className="border-b border-slate-200 px-3 text-start font-medium">{labels.status}</th>
+              <th className="border-b border-slate-200 px-3 text-end font-medium">{labels.actions}</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((student) => {
               const tone = rateTone(student.attendancePercent);
               return (
-                <tr key={student.id} className={cn("h-14 border-t border-slate-100", !student.active && "bg-slate-50 text-slate-500")}>
-                  <td className={cn("sticky start-0 z-10 border-e border-slate-200 px-3", student.active ? "bg-white" : "bg-slate-50")}>
+                <tr key={student.id} className={cn("h-14", !student.active && "text-slate-500")}>
+                  <td className={cn("sticky start-0 z-10 border-e border-t border-slate-200 px-3", student.active ? "bg-white" : "bg-slate-50")}>
                     <button type="button" onClick={() => setProfile(student)} className="flex min-w-0 items-center gap-2 text-start">
                       <span className="grid size-8 shrink-0 place-items-center rounded-full bg-sky-100 text-xs font-semibold text-sky-800">{initials(student)}</span>
                       <span className="min-w-0">
@@ -342,16 +426,16 @@ export function StudentsDirectory({
                       </span>
                     </button>
                   </td>
-                  <td className="px-3"><Ltr>{student.phone || "—"}</Ltr></td>
-                  <td className="px-3"><Ltr>{student.nationalId || "—"}</Ltr></td>
-                  <td className="max-w-[12rem] px-3 text-xs text-slate-600"><Ltr>{[student.bankName, student.bankBranch, student.bankAccount].filter(Boolean).join(" · ") || (student.bankConfirmed ? labels.bankYes : labels.bankNo)}</Ltr></td>
-                  <td className="max-w-[10rem] truncate px-3 text-slate-700">{student.track || "—"}</td>
-                  <td className="px-3">
+                  <td className="border-t border-slate-100 px-3"><Ltr>{student.phone || "—"}</Ltr></td>
+                  <td className="border-t border-slate-100 px-3"><Ltr>{student.nationalId || "—"}</Ltr></td>
+                  <td className="max-w-[12rem] border-t border-slate-100 px-3 text-xs text-slate-600"><Ltr>{[student.bankName, student.bankBranch, student.bankAccount].filter(Boolean).join(" · ") || (student.bankConfirmed ? labels.bankYes : labels.bankNo)}</Ltr></td>
+                  <td className="max-w-[10rem] truncate border-t border-slate-100 px-3 text-slate-700">{student.track || "—"}</td>
+                  <td className="border-t border-slate-100 px-3">
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", tone.badge)}>
                       <Ltr>{student.attendanceLabel}</Ltr>
                     </span>
                   </td>
-                  <td className="px-3">
+                  <td className="border-t border-slate-100 px-3">
                     {student.stipendStatus ? (
                       <span className="inline-flex items-center gap-1.5">
                         <Badge tone={student.stipendStatus}>{labels.statuses[student.stipendStatus]}</Badge>
@@ -361,7 +445,7 @@ export function StudentsDirectory({
                       <span className="text-xs text-muted-foreground">{labels.noStipend}</span>
                     )}
                   </td>
-                  <td className="px-3">
+                  <td className="border-t border-slate-100 px-3">
                     <button
                       type="button"
                       disabled={!canManage || busyId === student.id}
@@ -371,7 +455,7 @@ export function StudentsDirectory({
                       {student.active ? labels.active : labels.inactive}
                     </button>
                   </td>
-                  <td className="px-3 text-end">
+                  <td className="border-t border-slate-100 px-3 text-end">
                     <div className="flex flex-wrap justify-end gap-1">
                       <button type="button" onClick={() => setProfile(student)} className="rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-sky-50">
                         {labels.openProfile}
@@ -381,7 +465,7 @@ export function StudentsDirectory({
                           <button type="button" onClick={() => { setEditError(null); setEditing(student); }} className="rounded-lg px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100">
                             {labels.edit}
                           </button>
-                          <button type="button" disabled={busyId === student.id} onClick={() => removeStudent(student)} className="rounded-lg px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                          <button type="button" disabled={busyId === student.id} onClick={() => setPendingDelete(student)} className="rounded-lg px-2 py-1 text-xs font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50">
                             {labels.remove}
                           </button>
                         </>
@@ -462,34 +546,85 @@ export function StudentsDirectory({
         </Dialog.Portal>
       </Dialog.Root>
 
+      <Dialog.Root open={pendingDelete != null} onOpenChange={(next) => { if (!next && busyId == null) setPendingDelete(null); }}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(100vw-1.5rem,26rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-2xl outline-none">
+            {pendingDelete ? (
+              <>
+                <Dialog.Title className="text-lg font-semibold text-slate-950">{labels.remove}</Dialog.Title>
+                <Dialog.Description className="mt-2 text-sm leading-6 text-slate-600">{labels.confirmDelete}</Dialog.Description>
+                <p className="mt-4 rounded-2xl bg-rose-50 px-3 py-3 text-sm font-semibold text-rose-950">
+                  {fullName(pendingDelete)}
+                  {pendingDelete.nameAr ? <span className="mt-0.5 block font-normal text-rose-800">{pendingDelete.nameAr}</span> : null}
+                </p>
+                <div className="mt-5 flex flex-wrap justify-end gap-2">
+                  <Button type="button" variant="outline" disabled={busyId === pendingDelete.id} onClick={() => setPendingDelete(null)}>{labels.cancel}</Button>
+                  <Button type="button" variant="destructive" disabled={busyId === pendingDelete.id} onClick={removeStudent}>{labels.remove}</Button>
+                </div>
+              </>
+            ) : null}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
       <Dialog.Root open={editing != null} onOpenChange={(next) => { if (!next) setEditing(null); }}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
-          <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full max-w-[100vw] overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl outline-none md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:pb-4">
+          <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[min(92dvh,760px)] w-[min(100vw-1.5rem,36rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl bg-white shadow-2xl outline-none">
             {editing ? (
-              <>
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <Dialog.Title className="text-base font-semibold">{labels.edit}</Dialog.Title>
-                  <Dialog.Close className="rounded-lg p-1 text-slate-500 hover:bg-slate-100" aria-label={labels.close}>
+              <form key={editing.id} onSubmit={saveStudent} className="grid min-h-0 gap-4 overflow-y-auto p-5">
+                <input type="hidden" name="id" value={editing.id} />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-sky-100 text-sm font-semibold text-sky-800">{initials(editing)}</span>
+                    <div className="min-w-0">
+                      <Dialog.Title className="text-lg font-semibold text-slate-950">{labels.edit}</Dialog.Title>
+                      <p className="truncate text-sm text-slate-500">{fullName(editing)}</p>
+                      {editing.nameAr ? <p className="truncate text-sm text-slate-400">{editing.nameAr}</p> : null}
+                    </div>
+                  </div>
+                  <Dialog.Close className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-500 hover:bg-slate-100" aria-label={labels.close}>
                     <X className="size-4" />
                   </Dialog.Close>
                 </div>
-                <form onSubmit={saveStudent} className="grid gap-2">
-                  <input type="hidden" name="id" value={editing.id} />
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input name="firstName" placeholder={labels.firstName} defaultValue={editing.firstName} required />
-                    <Input name="lastName" placeholder={labels.lastName} defaultValue={editing.lastName} required />
+                <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <LabeledField label={labels.firstName}>
+                      <Input name="firstName" defaultValue={editing.firstName} required />
+                    </LabeledField>
+                    <LabeledField label={labels.lastName}>
+                      <Input name="lastName" defaultValue={editing.lastName} required />
+                    </LabeledField>
                   </div>
-                  <Input name="nameAr" placeholder={labels.nameAr} defaultValue={editing.nameAr ?? ""} />
-                  <Input name="email" type="email" placeholder={labels.email} defaultValue={editing.email ?? ""} required />
-                  <Input name="phone" placeholder={labels.phone} defaultValue={editing.phone ?? ""} />
-                  <Input name="nationalId" placeholder={labels.nationalId} defaultValue={editing.nationalId ?? ""} dir="ltr" />
-                  <Input name="academicTrack" placeholder={labels.track} defaultValue={editing.track ?? ""} />
-                  <Input name="password" type="password" placeholder={labels.passwordHint} minLength={8} />
-                  {editError ? <p className="text-sm text-rose-700">{editError}</p> : null}
+                  <LabeledField label={labels.nameAr}>
+                    <Input name="nameAr" defaultValue={editing.nameAr ?? ""} />
+                  </LabeledField>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <LabeledField label={labels.email}>
+                    <Input name="email" type="email" defaultValue={editing.email ?? ""} required dir="ltr" />
+                  </LabeledField>
+                  <LabeledField label={labels.phone}>
+                    <Input name="phone" defaultValue={editing.phone ?? ""} dir="ltr" />
+                  </LabeledField>
+                  <LabeledField label={labels.nationalId}>
+                    <Input name="nationalId" defaultValue={editing.nationalId ?? ""} dir="ltr" />
+                  </LabeledField>
+                  <LabeledField label={labels.track}>
+                    <Input name="academicTrack" defaultValue={editing.track ?? ""} />
+                  </LabeledField>
+                </div>
+                <LabeledField label={labels.password}>
+                  <Input name="password" type="password" minLength={8} autoComplete="new-password" />
+                  <span className="text-[11px] font-normal text-slate-400">{labels.passwordHint}</span>
+                </LabeledField>
+                {editError ? <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-800">{editError}</p> : null}
+                <div className="sticky bottom-0 flex flex-wrap justify-end gap-2 border-t border-slate-100 bg-white pt-3">
+                  <Button type="button" variant="outline" disabled={savingEdit} onClick={() => setEditing(null)}>{labels.cancel}</Button>
                   <Button type="submit" disabled={savingEdit}>{savingEdit ? labels.saving : labels.edit}</Button>
-                </form>
-              </>
+                </div>
+              </form>
             ) : null}
           </Dialog.Content>
         </Dialog.Portal>

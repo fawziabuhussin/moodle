@@ -99,6 +99,7 @@ export default async function UsersPage() {
           saving: dict.common.saving,
           deleteAccount: dict.users.deleteAccount,
           deleteConfirm: dict.users.deleteConfirm,
+          cancel: dict.common.cancel,
           noResults: dict.users.noResults,
           fullProfile: dict.users.fullProfile,
           passwordReset: dict.users.passwordReset,

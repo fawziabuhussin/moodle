@@ -188,6 +188,7 @@ export function UsersConsole({
     saving: string;
     deleteAccount: string;
     deleteConfirm: string;
+    cancel: string;
     noResults: string;
     fullProfile: string;
     passwordReset: string;
@@ -369,7 +370,7 @@ export function UsersConsole({
             <Contact user={user} labels={labels} />
             <div className="mt-3 flex items-center justify-between gap-2">
               <Status active={user.isActive} activeLabel={labels.active} archivedLabel={labels.archived} />
-              <Actions user={user} self={user.id === currentUserId} labels={labels} onEdit={() => openEdit(user)} onArchive={() => toggleActive(user)} onReset={() => resetPassword(user.id)} />
+              <Actions user={user} locale={locale} self={user.id === currentUserId} labels={labels} onEdit={() => openEdit(user)} onArchive={() => toggleActive(user)} onReset={() => resetPassword(user.id)} />
             </div>
           </li>
         ))}
@@ -391,7 +392,7 @@ export function UsersConsole({
                 <td className="px-4 py-3"><UserIdentity user={user} locale={locale} roleLabel={roleLabel} onOpen={() => openEdit(user)} /></td>
                 <td className="px-4 py-3"><Contact user={user} labels={labels} /></td>
                 <td className="px-4 py-3"><Status active={user.isActive} activeLabel={labels.active} archivedLabel={labels.archived} /></td>
-                <td className="px-4 py-3"><Actions user={user} self={user.id === currentUserId} labels={labels} onEdit={() => openEdit(user)} onArchive={() => toggleActive(user)} onReset={() => resetPassword(user.id)} /></td>
+                <td className="px-4 py-3"><Actions user={user} locale={locale} self={user.id === currentUserId} labels={labels} onEdit={() => openEdit(user)} onArchive={() => toggleActive(user)} onReset={() => resetPassword(user.id)} /></td>
               </tr>
             ))}
           </tbody>
@@ -561,6 +562,7 @@ function Status({ active, activeLabel, archivedLabel }: { active: boolean; activ
 
 function Actions({
   user,
+  locale,
   self,
   labels,
   onEdit,
@@ -568,8 +570,9 @@ function Actions({
   onReset,
 }: {
   user: ManagedUser;
+  locale: Locale;
   self: boolean;
-  labels: { editUser: string; archive: string; restore: string; password: string; deleteAccount: string; deleteConfirm: string; saving: string };
+  labels: { editUser: string; archive: string; restore: string; password: string; deleteAccount: string; deleteConfirm: string; cancel: string; saving: string };
   onEdit: () => void;
   onArchive: () => void;
   onReset: () => void;
@@ -587,7 +590,18 @@ function Actions({
           {user.isActive ? <Archive className="size-4" /> : <ArchiveRestore className="size-4" />}
         </button>
       )}
-      {self ? null : <DeleteUserButton compact id={user.id} label={labels.deleteAccount} pendingLabel={labels.saving} confirmLabel={labels.deleteConfirm} />}
+      {self ? null : (
+        <DeleteUserButton
+          compact
+          id={user.id}
+          name={shownName(user, locale)}
+          detail={otherName(user, locale)}
+          label={labels.deleteAccount}
+          pendingLabel={labels.saving}
+          confirmLabel={labels.deleteConfirm}
+          cancelLabel={labels.cancel}
+        />
+      )}
     </div>
   );
 }

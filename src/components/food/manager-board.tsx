@@ -6,9 +6,10 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { closeFoodPollAction, extendFoodPollAction, openFoodPollAction } from "@/server/actions/food";
+import { closeFoodPollAction, extendFoodPollAction, openFoodPollAction, saveFoodMenuAction } from "@/server/actions/food";
 
-type RestaurantChoice = { id: string; name: string; logoIcon: string };
+type SavedMenu = { id: string; name: string; text: string };
+type HistoryEntry = { id: string; when: string; menuName: string; price: string | null; count: number; lines: string[] };
 
 export type FoodLabels = {
   openPoll: string;
@@ -22,16 +23,30 @@ export type FoodLabels = {
   remaining: string;
   orders: string;
   restaurant: string;
+  menu: string;
+  menuName: string;
+  menuItems: string;
+  saveMenu: string;
+  newMenu: string;
+  price: string;
+  priceHint: string;
+  history: string;
+  noHistory: string;
+  ordersCount: string;
 };
 
 export function ManagerBoard({
   poll,
-  restaurants,
+  restaurantId,
+  menus,
+  history,
   lines,
   labels,
 }: {
-  poll: { id: string; status: "OPEN" | "CLOSED"; closesAt: string; restaurantName: string; logoIcon: string } | null;
-  restaurants: RestaurantChoice[];
+  poll: { id: string; status: "OPEN" | "CLOSED"; closesAt: string; restaurantName: string; logoIcon: string; price: string | null } | null;
+  restaurantId: string;
+  menus: SavedMenu[];
+  history: HistoryEntry[];
   lines: string[];
   labels: FoodLabels;
 }) {
@@ -84,7 +99,7 @@ export function ManagerBoard({
         {poll && open ? (
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-orange-900/80">{poll.logoIcon} {poll.restaurantName}</p>
+              <p className="text-sm text-orange-900/80">{poll.logoIcon} {poll.restaurantName}{poll.price ? ` · ${poll.price}` : ""}</p>
               <p className="text-xs font-medium text-orange-800">{labels.remaining}</p>
               <motion.p
                 key={clock}
@@ -107,20 +122,20 @@ export function ManagerBoard({
           </div>
         ) : (
           <form
-            className="grid gap-3 sm:grid-cols-[1fr_8rem_auto] sm:items-end"
+            className="grid gap-3"
             onSubmit={(event) => {
               event.preventDefault();
               const data = new FormData(event.currentTarget);
               run(() => openFoodPollAction(null, data));
             }}
           >
+            <input type="hidden" name="restaurantId" value={restaurantId} />
+            <div className="grid gap-3 sm:grid-cols-3">
             <label className="grid gap-1 text-sm font-medium text-orange-950">
-              {labels.restaurant}
-              <Select name="restaurantId" defaultValue={restaurants[0]?.id ?? ""}>
-                {restaurants.map((restaurant) => (
-                  <option key={restaurant.id} value={restaurant.id}>
-                    {restaurant.logoIcon} {restaurant.name}
-                  </option>
+              {labels.menu}
+              <Select name="menuId" defaultValue={menus[0]?.id ?? ""}>
+                {menus.map((menu) => (
+                  <option key={menu.id} value={menu.id}>{menu.name}</option>
                 ))}
               </Select>
             </label>
@@ -128,7 +143,12 @@ export function ManagerBoard({
               {labels.minutes}
               <Input name="minutes" type="number" min={1} max={180} defaultValue={15} dir="ltr" />
             </label>
-            <Button type="submit" disabled={pending || restaurants.length === 0} className="bg-orange-600 hover:bg-orange-700">
+            <label className="grid gap-1 text-sm font-medium text-orange-950">
+              {labels.price}
+              <Input name="price" type="number" min={0} step="0.01" placeholder={labels.priceHint} dir="ltr" />
+            </label>
+            </div>
+            <Button type="submit" disabled={pending || menus.length === 0} className="bg-orange-600 hover:bg-orange-700">
               {labels.openPoll}
             </Button>
           </form>
@@ -148,7 +168,108 @@ export function ManagerBoard({
           {text}
         </pre>
       </section>
+
+      <History entries={history} labels={labels} />
+      <MenuEditor key={menus.map((menu) => menu.id).join()} restaurantId={restaurantId} menus={menus} pending={pending} labels={labels} onSave={(data) => run(() => saveFoodMenuAction(null, data))} />
     </div>
+  );
+}
+
+function MenuEditor({
+  restaurantId,
+  menus,
+  pending,
+  labels,
+  onSave,
+}: {
+  restaurantId: string;
+  menus: SavedMenu[];
+  pending: boolean;
+  labels: FoodLabels;
+  onSave: (data: FormData) => void;
+}) {
+  const [selected, setSelected] = useState(menus[0]?.id ?? "");
+  const menu = menus.find((item) => item.id === selected);
+
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-lg font-semibold">{labels.menu}</h2>
+      <p className="mt-1 text-sm text-slate-500">{labels.menuItems}</p>
+      <form
+        key={selected || "new"}
+        className="mt-3 grid gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSave(new FormData(event.currentTarget));
+        }}
+      >
+        <input type="hidden" name="restaurantId" value={restaurantId} />
+        <input type="hidden" name="menuId" value={selected} />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm font-medium">
+            {labels.menu}
+            <Select value={selected} onChange={(event) => setSelected(event.target.value)}>
+              {menus.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+              <option value="">{labels.newMenu}</option>
+            </Select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            {labels.menuName}
+            <Input name="name" defaultValue={menu?.name ?? ""} required />
+          </label>
+        </div>
+        <textarea
+          name="items"
+          required
+          rows={14}
+          defaultValue={menu?.text ?? ""}
+          dir="rtl"
+          className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-base leading-7 text-slate-900 outline-none focus:border-orange-400"
+        />
+        <Button type="submit" disabled={pending} className="bg-orange-600 hover:bg-orange-700">{labels.saveMenu}</Button>
+      </form>
+    </section>
+  );
+}
+
+function History({ entries, labels }: { entries: HistoryEntry[]; labels: FoodLabels }) {
+  const [copied, setCopied] = useState<string | null>(null);
+
+  async function copy(id: string, text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(id);
+      window.setTimeout(() => setCopied(null), 1600);
+    } catch {
+      setCopied(null);
+    }
+  }
+
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="text-lg font-semibold">{labels.history}</h2>
+      {entries.length === 0 ? <p className="mt-2 text-sm text-slate-500">{labels.noHistory}</p> : null}
+      <div className="mt-3 grid gap-2">
+        {entries.map((entry) => (
+          <details key={entry.id} className="rounded-2xl border border-slate-200 bg-slate-50">
+            <summary className="cursor-pointer list-none px-3 py-3 text-sm font-medium text-slate-900">
+              <span className="block">{entry.when}</span>
+              <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                {entry.menuName} · {entry.count} {labels.ordersCount}{entry.price ? ` · ${entry.price}` : ""}
+              </span>
+            </summary>
+            <div className="grid gap-2 px-3 pb-3">
+              <pre className="whitespace-pre-wrap text-sm leading-7 text-slate-800" dir="rtl">{entry.lines.join("\n") || labels.noOrders}</pre>
+              <Button type="button" variant="outline" disabled={entry.lines.length === 0} onClick={() => copy(entry.id, entry.lines.join("\n"))}>
+                {copied === entry.id ? labels.copied : labels.copy}
+              </Button>
+            </div>
+          </details>
+        ))}
+      </div>
+    </section>
   );
 }
 

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { submitFoodOrderAction } from "@/server/actions/food";
 
 type Addition = { name: string; emoji: string };
-type Item = { id: string; name: string; emoji: string; additions: Addition[] };
+type Item = { id: string; name: string; emoji: string; price: string | null; additions: Addition[] };
 
 export type PickerLabels = {
   remaining: string;
@@ -20,12 +20,14 @@ export type PickerLabels = {
   confirm: string;
   saved: string;
   choose: string;
+  price: string;
 };
 
 export function FoodPicker({
   pollId,
   closesAt,
   status,
+  offerPrice,
   items,
   current,
   labels,
@@ -33,6 +35,7 @@ export function FoodPicker({
   pollId: string;
   closesAt: string;
   status: "OPEN" | "CLOSED";
+  offerPrice: string | null;
   items: Item[];
   current: { menuItemId: string; additions: string[]; notes: string } | null;
   labels: PickerLabels;
@@ -105,6 +108,7 @@ export function FoodPicker({
         ) : (
           <p className="text-center text-base font-semibold text-rose-800">{labels.closed}</p>
         )}
+        {offerPrice ? <p className="mt-1 text-sm font-medium text-orange-900">{labels.price}: <bdi dir="ltr">{offerPrice}</bdi></p> : null}
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -124,6 +128,7 @@ export function FoodPicker({
           >
             <span className="text-4xl">{menuItem.emoji}</span>
             <span className="mt-3 block text-base font-semibold text-orange-950">{menuItem.name}</span>
+            {menuItem.price ? <span className="mt-1 block text-sm text-orange-800" dir="ltr">{menuItem.price}</span> : null}
           </motion.button>
         ))}
       </div>
