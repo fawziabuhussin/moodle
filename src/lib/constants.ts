@@ -1,3 +1,6 @@
+/** Temporary switch for the attendance terminal page. The hardware API stays available. */
+export const TERMINAL_PAGE_ENABLED = false;
+
 export const TOKEN_COOKIE = "entilaka_token";
 export const LOCALE_COOKIE = "entilaka_locale";
 export const LOCALES = ["he", "ar", "en"] as const;

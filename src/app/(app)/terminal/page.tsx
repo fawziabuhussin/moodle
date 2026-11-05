@@ -1,12 +1,15 @@
+import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/form";
 import { PageHeader } from "@/components/page-header";
 import { Input, Select } from "@/components/ui/input";
 import { simulateTerminalAction } from "@/server/actions/attendance";
 import { getLocale, requirePermission } from "@/lib/auth";
+import { TERMINAL_PAGE_ENABLED } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
 
 export default async function TerminalPage() {
+  if (!TERMINAL_PAGE_ENABLED) redirect("/dashboard");
   await requirePermission("manage_attendance");
   const dict = getDictionary(await getLocale());
   const courses = await getPrisma().course.findMany({ where: { isActive: true }, orderBy: { title: "asc" } });

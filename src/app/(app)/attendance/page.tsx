@@ -9,6 +9,7 @@ import type { Locale } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
 import { activeStudentWhere } from "@/lib/cohort";
+import { TERMINAL_PAGE_ENABLED } from "@/lib/constants";
 import { appTimeZone, calendarDateFromISO, formatTime, todayISO } from "@/lib/time";
 
 export default async function AttendancePage({ searchParams }: { searchParams: Promise<{ date?: string; courseId?: string }> }) {
@@ -51,7 +52,7 @@ export default async function AttendancePage({ searchParams }: { searchParams: P
       <p className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
         <span>{dict.attendance.machine}</span>
         <Ltr>{setting?.officialStartTime ?? "16:00"}</Ltr>
-        <Link href="/terminal" className="font-medium text-primary">{dict.nav.terminal}</Link>
+        {TERMINAL_PAGE_ENABLED ? <Link href="/terminal" className="font-medium text-primary">{dict.nav.terminal}</Link> : null}
         <Ltr>POST /api/v1/attendance/terminal</Ltr>
       </p>
       <AttendanceBoard

@@ -6,6 +6,7 @@ import { recordTerminalTap, resolveArrivalStatus } from "@/lib/attendance";
 import { syncAttendanceSheet } from "@/server/attendance-sheet";
 import { activeStudentWhere } from "@/lib/cohort";
 import { getLocale, requirePermission } from "@/lib/auth";
+import { TERMINAL_PAGE_ENABLED } from "@/lib/constants";
 import { field, optional } from "@/lib/form";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
@@ -227,6 +228,7 @@ export async function saveCourseAttendanceSettingsAction(_prev: ActionState, for
 export async function simulateTerminalAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requirePermission("manage_attendance");
   const dict = getDictionary(await getLocale());
+  if (!TERMINAL_PAGE_ENABLED) return { error: dict.errors.forbidden };
   const badge = field(formData, "hardwareBadgeId");
   const timestampRaw = field(formData, "timestamp");
   const courseId = optional(formData, "courseId");

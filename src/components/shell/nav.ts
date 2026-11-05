@@ -1,3 +1,4 @@
+import { TERMINAL_PAGE_ENABLED } from "@/lib/constants";
 import type { Permission } from "@/lib/permissions";
 
 export type IconName =
@@ -59,7 +60,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/users", key: "users", icon: "users", section: "admin", permission: "manage_users_and_roles" },
   { href: "/roles", key: "roles", icon: "roles", section: "admin", permission: "manage_users_and_roles" },
   { href: "/settings", key: "settings", icon: "settings", section: "system", permission: "configure_attendance_settings" },
-  { href: "/terminal", key: "terminal", icon: "terminal", section: "system", permission: "manage_attendance" },
+  ...(TERMINAL_PAGE_ENABLED
+    ? [{ href: "/terminal", key: "terminal", icon: "terminal", section: "system", permission: "manage_attendance" } as const]
+    : []),
 ];
 
 export const STUDENT_NAV: NavItem[] = [
