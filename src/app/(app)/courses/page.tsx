@@ -3,6 +3,7 @@ import { Ltr } from "@/components/ltr";
 import { ActionForm, SubmitButton } from "@/components/form";
 import { PageHeader } from "@/components/page-header";
 import { Input, Textarea } from "@/components/ui/input";
+import { isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n";
 import { hasPermission } from "@/lib/permissions";
@@ -13,6 +14,7 @@ import { createCourseAction } from "@/server/actions/learning";
 export default async function CoursesPage() {
   const session = await requireUser();
   const dict = getDictionary(await getLocale());
+  const portal = isStudentPortal(session);
   const manager = hasPermission(session.permissions, "manage_courses");
   const courses = await getPrisma().course.findMany({
     where: manager
@@ -27,7 +29,7 @@ export default async function CoursesPage() {
 
   return (
     <div>
-      <PageHeader title={dict.courses.title} description={dict.courses.subtitle} />
+      <PageHeader title={portal ? dict.nav.studentCourses : dict.courses.title} description={portal ? undefined : dict.courses.subtitle} />
       {manager ? (
         <ActionForm action={createCourseAction} className="mb-4 grid gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 md:grid-cols-2">
           <h2 className="font-semibold md:col-span-2">{dict.courses.createTitle}</h2>

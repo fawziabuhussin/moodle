@@ -5,6 +5,7 @@ import { SheetEditor } from "@/components/files/sheet-editor";
 import { PageHeader } from "@/components/page-header";
 import { Input, Select } from "@/components/ui/input";
 import { getLocale, requireUser } from "@/lib/auth";
+import { canEditDrive, grantMatches, type DriveViewer } from "@/lib/drive-access";
 import { filesCopy } from "@/lib/files-copy";
 import type { SheetColumn, SheetRow } from "@/lib/sheet-types";
 import { hasAnyPermission, type Permission } from "@/lib/permissions";
@@ -63,11 +64,14 @@ export default async function DriveFilePage({ params }: { params: Promise<{ slug
   const staff = hasAnyPermission(session.permissions, EDITORS);
   const { slug } = await params;
   const db = getPrisma();
-  const [file, folders] = await Promise.all([
+  const [file, folders, enrollments] = await Promise.all([
     db.driveFile.findUnique({ where: { slug }, include: { folder: true } }),
     db.driveFolder.findMany({ select: { id: true, parentId: true, slug: true, name: true } }),
+    staff ? Promise.resolve([]) : db.courseEnrollment.findMany({ where: { userId: session.id }, select: { courseId: true } }),
   ]);
-  if (!file || (!staff && file.visibility !== "SHARED")) notFound();
+  const viewer: DriveViewer = { staff, userId: session.id, courseIds: enrollments.map((row) => row.courseId) };
+  if (!file || !grantMatches(file, viewer)) notFound();
+  const editable = canEditDrive(file, viewer);
   const columns = columnsOf(file.columns);
   const rows = rowsOf(file.rows);
   const profiles = file.kind === "SHEET" ? await studentProfileMap(columns, rows, session) : {};
@@ -92,7 +96,7 @@ export default async function DriveFilePage({ params }: { params: Promise<{ slug
         <span className="truncate font-semibold">{file.name}</span>
       </nav>
       {file.kind === "SHEET" ? (
-        <SheetEditor slug={file.slug} columns={columns} initialRows={rows} canEdit={staff} profiles={profiles} copy={copy} />
+        <SheetEditor slug={file.slug} columns={columns} initialRows={rows} canEdit={editable} profiles={profiles} copy={copy} />
       ) : null}
       {file.kind === "DOC" ? (
         <article className="whitespace-pre-wrap rounded-2xl border border-slate-200/80 bg-card p-4 text-sm leading-7 shadow-sm">{file.body}</article>
@@ -107,7 +111,7 @@ export default async function DriveFilePage({ params }: { params: Promise<{ slug
         <article className="grid max-w-lg gap-3 rounded-2xl border border-slate-200/80 bg-card p-4 text-sm shadow-sm">
           <p>{file.body === "uploaded" ? copy.uploaded : copy.missing}</p>
           {file.linkUrl ? <p className="break-all text-slate-600">{file.linkUrl}</p> : null}
-          {staff ? (
+          {editable ? (
             <ActionForm action={saveUploadAction} className="grid gap-3">
               <input type="hidden" name="slug" value={file.slug} />
               <label className="grid gap-1">

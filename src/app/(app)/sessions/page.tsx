@@ -4,7 +4,7 @@ import { Timestamp } from "@/components/ltr";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input, Select, Textarea } from "@/components/ui/input";
-import { canSeeStaffNotes } from "@/lib/access";
+import { canSeeStaffNotes, isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
 import { getDictionary } from "@/lib/i18n";
@@ -18,9 +18,9 @@ export default async function SessionsPage({ searchParams }: { searchParams: Pro
   const session = await requireUser();
   const locale = (await getLocale()) as Locale;
   const dict = getDictionary(locale);
+  if (isStudentPortal(session)) redirect("/dashboard?notice=forbidden");
   const manager = hasPermission(session.permissions, "manage_private_sessions");
-  const isStudent = session.roleSlugs.includes("student");
-  if (!manager && !isStudent) redirect("/dashboard?notice=forbidden");
+  if (!manager) redirect("/dashboard?notice=forbidden");
   const preselect = (await searchParams).studentId ?? "";
   const db = getPrisma();
   const sessions = await db.privateSession.findMany({

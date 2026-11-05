@@ -13,6 +13,14 @@ export function isEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+export function isNationalId(value: string) {
+  return /^\d{9}$/.test(value);
+}
+
+export function isLoginIdentifier(value: string) {
+  return isEmail(value) || isNationalId(value);
+}
+
 export function isUniqueConflict(error: unknown) {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 }

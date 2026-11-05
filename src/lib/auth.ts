@@ -117,9 +117,12 @@ export async function requirePermission(permission: Permission) {
   return session;
 }
 
-export async function authenticate(email: string, password: string, userAgent: string | null) {
+export async function authenticate(identifier: string, password: string, userAgent: string | null) {
   const db = getPrisma();
-  const user = await db.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  const key = identifier.trim().toLowerCase();
+  const user = /^\d{9}$/.test(key)
+    ? await db.user.findFirst({ where: { isActive: true, studentProfile: { is: { nationalId: key } } } })
+    : await db.user.findUnique({ where: { email: key } });
   if (!user || !user.isActive) return null;
   const valid = await compare(password, user.passwordHash);
   if (!valid) return null;

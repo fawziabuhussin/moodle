@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { attachSessionCookie, authenticate } from "@/lib/auth";
-import { isEmail } from "@/lib/form";
+import { isLoginIdentifier } from "@/lib/form";
 import { getPrisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   }
   const email = body.email?.trim().toLowerCase() ?? "";
   const password = body.password ?? "";
-  if (!isEmail(email) || password.length < 8) {
+  if (!isLoginIdentifier(email) || password.length < 8) {
     return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
   }
   const result = await authenticate(email, password, request.headers.get("user-agent"));

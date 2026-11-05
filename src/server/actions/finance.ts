@@ -67,6 +67,75 @@ export async function generateStipendsAction(_prev: ActionState, formData: FormD
   return { success: dict.stipends.generated };
 }
 
+export async function saveMonthStipendAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requirePermission("manage_stipends");
+  const dict = getDictionary(await getLocale());
+  const match = /^(\d{4})-(\d{2})$/.exec(field(formData, "period"));
+  const studentId = field(formData, "studentId");
+  const amount = Number(field(formData, "amount"));
+  const notes = optional(formData, "notes");
+  if (!match || !studentId || !Number.isFinite(amount) || amount < 0) return { error: dict.errors.invalid };
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const db = getPrisma();
+  const student = await db.user.findFirst({
+    where: { id: studentId, ...activeStudentWhere(), roles: { some: { role: { slug: "student" } } } },
+    select: { id: true },
+  });
+  if (!student) return { error: dict.errors.notFound };
+  const existing = await db.stipendPayment.findUnique({ where: { studentId_month_year: { studentId, month, year } } });
+  const money = roundMoney(amount);
+  if (!existing) {
+    await db.stipendPayment.create({
+      data: { studentId, month, year, baseAmount: money, deductionAmount: 0, bonusAmount: 0, finalAmount: money, notes },
+    });
+  } else if (existing.status === "PAID") {
+    await db.stipendPayment.update({ where: { id: existing.id }, data: { notes } });
+  } else {
+    await db.stipendPayment.update({
+      where: { id: existing.id },
+      data: { baseAmount: money, deductionAmount: 0, bonusAmount: 0, finalAmount: money, notes },
+    });
+  }
+  revalidatePath("/stipends");
+  revalidatePath("/students");
+  return { success: dict.common.saved };
+}
+
+export async function applyMonthAmountAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requirePermission("manage_stipends");
+  const dict = getDictionary(await getLocale());
+  const match = /^(\d{4})-(\d{2})$/.exec(field(formData, "period"));
+  const amount = Number(field(formData, "amount"));
+  const studentIds = formData.getAll("studentId").map(String).filter(Boolean);
+  if (!match || !Number.isFinite(amount) || amount < 0 || studentIds.length === 0) return { error: dict.errors.invalid };
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const db = getPrisma();
+  const allowed = await db.user.findMany({
+    where: { id: { in: studentIds }, ...activeStudentWhere() },
+    select: { id: true },
+  });
+  const money = roundMoney(amount);
+  for (const student of allowed) {
+    const existing = await db.stipendPayment.findUnique({ where: { studentId_month_year: { studentId: student.id, month, year } } });
+    if (existing?.status === "PAID") continue;
+    if (!existing) {
+      await db.stipendPayment.create({
+        data: { studentId: student.id, month, year, baseAmount: money, deductionAmount: 0, bonusAmount: 0, finalAmount: money },
+      });
+    } else {
+      await db.stipendPayment.update({
+        where: { id: existing.id },
+        data: { baseAmount: money, deductionAmount: 0, bonusAmount: 0, finalAmount: money },
+      });
+    }
+  }
+  revalidatePath("/stipends");
+  revalidatePath("/students");
+  return { success: dict.common.saved };
+}
+
 export async function updateStipendAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requirePermission("manage_stipends");
   const dict = getDictionary(await getLocale());

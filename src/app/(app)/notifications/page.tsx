@@ -2,6 +2,7 @@ import { ActionForm, SubmitButton } from "@/components/form";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input, Select, Textarea } from "@/components/ui/input";
+import { isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
 import { Timestamp } from "@/components/ltr";
@@ -16,6 +17,7 @@ export default async function NotificationsPage() {
   const session = await requireUser();
   const locale = (await getLocale()) as Locale;
   const dict = getDictionary(locale);
+  const portal = isStudentPortal(session);
   const manager = hasPermission(session.permissions, "send_global_notifications");
   const db = getPrisma();
   const [items, courses, students] = await Promise.all([
@@ -33,7 +35,7 @@ export default async function NotificationsPage() {
 
   return (
     <div>
-      <PageHeader title={dict.notifications.title} description={dict.notifications.subtitle} />
+      <PageHeader title={portal ? dict.nav.studentNotifications : dict.notifications.title} description={portal ? undefined : dict.notifications.subtitle} />
       {manager ? (
         <ActionForm action={sendBroadcastAction} className="mb-4 grid gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4">
           <h2 className="font-semibold">{dict.notifications.composer}</h2>

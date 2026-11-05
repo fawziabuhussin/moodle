@@ -36,6 +36,10 @@ export function canSeeStaffNotes(session: SessionUser) {
   return hasAnyPermission(session.permissions, ["manage_users_and_roles", "manage_private_sessions"]);
 }
 
+export function isStudentPortal(session: SessionUser) {
+  return session.roleSlugs.includes("student") && session.permissions.length === 0;
+}
+
 export async function loadCourseForSession(session: SessionUser, courseId: string) {
   const course = await getPrisma().course.findUnique({
     where: { id: courseId },

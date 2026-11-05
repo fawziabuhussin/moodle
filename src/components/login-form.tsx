@@ -9,7 +9,6 @@ import { loginAction } from "@/server/actions/auth";
 const DEMOS = [
   { label: "Manager", email: "manager@entilaka.local", password: "Manager123!" },
   { label: "Teacher", email: "teacher@entilaka.local", password: "Teacher123!" },
-  { label: "Student", email: "student@entilaka.local", password: "Student123!" },
 ] as const;
 
 export function LoginForm({
@@ -46,7 +45,7 @@ export function LoginForm({
       <input type="hidden" name="next" value={next} />
       <label className="grid gap-1.5 text-sm font-medium">
         {emailLabel}
-        <Input name="email" type="email" autoComplete="username" required dir="ltr" className="h-12 text-base tabular-nums" />
+        <Input name="email" type="text" autoComplete="username" required dir="ltr" className="h-12 text-base tabular-nums" />
       </label>
       <label className="grid gap-1.5 text-sm font-medium">
         {passwordLabel}

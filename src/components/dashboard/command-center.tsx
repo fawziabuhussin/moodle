@@ -93,6 +93,7 @@ export function CommandCenter({
   announcements,
   sessions,
   notice,
+  showSessions = true,
 }: {
   copy: DashboardCopy;
   locale: "he" | "ar" | "en";
@@ -111,6 +112,7 @@ export function CommandCenter({
   announcements: Announcement[];
   sessions: SessionCard[];
   notice?: string | null;
+  showSessions?: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -281,7 +283,7 @@ export function CommandCenter({
         </article>
       </section>
 
-      <article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      {showSessions ? (<article className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-semibold">{copy.sessions}</h2>
           <Link href="/sessions" className="text-xs font-medium text-primary">{copy.openSessions}</Link>
@@ -296,7 +298,7 @@ export function CommandCenter({
             </Link>
           ))}
         </div>
-      </article>
+      </article>) : null}
 
       <Dialog.Root open={draft != null} onOpenChange={(open) => { if (!open) setDraft(null); }}>
         <Dialog.Portal>

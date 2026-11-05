@@ -1,5 +1,6 @@
 import { CommandCenter } from "@/components/dashboard/command-center";
 import { PageHeader } from "@/components/page-header";
+import { isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import { activeStudentWhere } from "@/lib/cohort";
 import type { Locale } from "@/lib/constants";
@@ -23,7 +24,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const todayKey = todayISO();
   const zone = appTimeZone();
   const executive = hasAnyPermission(session.permissions, ["manage_users_and_roles", "manage_attendance", "manage_courses", "manage_stipends"]);
+  const portal = isStudentPortal(session);
   const current = activeStudentWhere();
+  const enrolledIds = portal
+    ? (await db.courseEnrollment.findMany({ where: { userId: session.id }, select: { courseId: true } })).map((row) => row.courseId)
+    : [];
 
   const [studentCount, track800, trackBase, courses, records, pending, plan, announcements, upcoming] = await Promise.all([
     db.user.count({ where: { ...current, roles: { some: { role: { slug: "student" } } } } }),
@@ -47,7 +52,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
     }),
     db.notification.findMany({
-      where: { audience: { in: ["ALL_STUDENTS", "COURSE"] } },
+      where: portal
+        ? { OR: [{ audience: "ALL_STUDENTS" }, { audience: "COURSE", courseId: { in: enrolledIds } }] }
+        : { audience: { in: ["ALL_STUDENTS", "COURSE"] } },
       include: {
         course: { select: { code: true, title: true } },
         createdBy: { select: { firstName: true, lastName: true, roles: { include: { role: { select: { name: true } } } } } },
@@ -55,7 +62,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       orderBy: [{ isPinned: "desc" }, { createdAt: "desc" }],
       take: 8,
     }),
-    db.privateSession.findMany({
+    portal ? Promise.resolve([]) : db.privateSession.findMany({
       where: {
         status: "SCHEDULED",
         scheduledAt: { gte: new Date() },
@@ -145,6 +152,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           badge: session.roleSlugs.includes("student") ? null : item.student.hardwareBadgeId,
         }))}
         notice={notice === "forbidden" ? dict.errors.forbidden : null}
+        showSessions={!portal}
       />
     </div>
   );

@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { Prisma } from "@prisma/client";
+import { Prisma, type DriveAccess, type DriveVisibility } from "@prisma/client";
 import { requireUser } from "@/lib/auth";
+import { canEditDrive, grantMatches, type DriveViewer } from "@/lib/drive-access";
 import type { ActionState } from "@/lib/types";
 import { hasAnyPermission, type Permission } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
@@ -11,6 +12,15 @@ import type { SheetColumn, SheetRow } from "@/lib/sheet-types";
 import { fromCsv, fromXlsx, toCsv, toXlsx } from "@/server/sheets";
 
 const EDITORS: Permission[] = ["manage_users_and_roles", "manage_attendance", "manage_stipends", "manage_courses"];
+const VISIBILITIES = new Set<DriveVisibility>(["MANAGERS_ONLY", "ALL_STUDENTS", "SPECIFIC_COURSES", "SPECIFIC_STUDENTS"]);
+const ACCESS_LEVELS = new Set<DriveAccess>(["VIEW", "EDIT"]);
+
+async function viewerFor(session: { id: string; permissions: string[] }): Promise<DriveViewer> {
+  const staff = hasAnyPermission(session.permissions, EDITORS);
+  if (staff) return { staff: true, userId: session.id, courseIds: [] };
+  const rows = await getPrisma().courseEnrollment.findMany({ where: { userId: session.id }, select: { courseId: true } });
+  return { staff: false, userId: session.id, courseIds: rows.map((row) => row.courseId) };
+}
 
 async function requireEditor() {
   const session = await requireUser();
@@ -35,11 +45,11 @@ function asRows(value: unknown): SheetRow[] {
 }
 
 async function persistSheet(slug: string, columns: SheetColumn[], rows: SheetRow[]) {
-  const editor = await requireEditor();
-  if (!editor) return { error: "forbidden" as const };
+  const session = await requireUser();
   const db = getPrisma();
   const file = await db.driveFile.findUnique({ where: { slug } });
   if (!file || file.kind !== "SHEET") return { error: "missing" as const };
+  if (!canEditDrive(file, await viewerFor(session))) return { error: "forbidden" as const };
   await db.driveFile.update({
     where: { id: file.id },
     data: {
@@ -72,11 +82,11 @@ export async function saveSheetAction(slug: string, columns: SheetColumn[], rows
 }
 
 export async function importSheetAction(slug: string, filename: string, base64: string) {
-  const editor = await requireEditor();
-  if (!editor) return { error: "forbidden" as const };
+  const session = await requireUser();
   const db = getPrisma();
   const file = await db.driveFile.findUnique({ where: { slug } });
   if (!file || file.kind !== "SHEET") return { error: "missing" as const };
+  if (!canEditDrive(file, await viewerFor(session))) return { error: "forbidden" as const };
   const columns = asColumns(file.columns);
   const lower = filename.toLowerCase();
   const parsed = lower.endsWith(".xlsx") || lower.endsWith(".xls")
@@ -90,8 +100,8 @@ export async function exportSheetAction(slug: string, format: "csv" | "xlsx") {
   const db = getPrisma();
   const file = await db.driveFile.findUnique({ where: { slug } });
   if (!file || file.kind !== "SHEET") return { error: "missing" as const };
-  const staff = hasAnyPermission(session.permissions, EDITORS);
-  if (!staff && file.visibility !== "SHARED") return { error: "forbidden" as const };
+  const viewer = await viewerFor(session);
+  if (!grantMatches(file, viewer)) return { error: "forbidden" as const };
   const columns = asColumns(file.columns);
   const rows = asRows(file.rows);
   if (format === "csv") {
@@ -102,8 +112,7 @@ export async function exportSheetAction(slug: string, format: "csv" | "xlsx") {
 }
 
 export async function saveUploadAction(_state: ActionState, formData: FormData): Promise<ActionState> {
-  const editor = await requireEditor();
-  if (!editor) return { error: "forbidden" };
+  const session = await requireUser();
   const slug = String(formData.get("slug") ?? "");
   const filename = String(formData.get("filename") ?? "").trim();
   const status = String(formData.get("status") ?? "missing");
@@ -111,6 +120,7 @@ export async function saveUploadAction(_state: ActionState, formData: FormData):
   const db = getPrisma();
   const file = await db.driveFile.findUnique({ where: { slug } });
   if (!file || file.kind !== "PDF_UPLOAD") return { error: "missing" };
+  if (!canEditDrive(file, await viewerFor(session))) return { error: "forbidden" };
   await db.driveFile.update({
     where: { id: file.id },
     data: { body: uploaded ? "uploaded" : "missing", linkUrl: filename || null },
@@ -132,5 +142,38 @@ export async function saveUploadAction(_state: ActionState, formData: FormData):
   revalidatePath(`/files/${slug}`);
   if (file.studentId) revalidatePath(`/students/${file.studentId}`);
   revalidatePath("/students");
+  return { success: "saved" };
+}
+
+export async function setDriveAccessAction(_state: ActionState, formData: FormData): Promise<ActionState> {
+  const editor = await requireEditor();
+  if (!editor) return { error: "forbidden" };
+  const kind = String(formData.get("kind") ?? "");
+  const slug = String(formData.get("slug") ?? "");
+  const visibility = String(formData.get("visibility") ?? "");
+  const access = String(formData.get("access") ?? "");
+  if ((kind !== "folder" && kind !== "file") || !slug || !VISIBILITIES.has(visibility as DriveVisibility) || !ACCESS_LEVELS.has(access as DriveAccess)) {
+    return { error: "invalid" };
+  }
+  const allowedUserIds = [...new Set(formData.getAll("userId").map(String).filter(Boolean))];
+  const allowedCourseIds = [...new Set(formData.getAll("courseId").map(String).filter(Boolean))];
+  const data = {
+    visibility: visibility as DriveVisibility,
+    access: access as DriveAccess,
+    allowedUserIds: visibility === "SPECIFIC_STUDENTS" ? allowedUserIds : [],
+    allowedCourseIds: visibility === "SPECIFIC_COURSES" ? allowedCourseIds : [],
+  };
+  const db = getPrisma();
+  if (kind === "folder") {
+    const folder = await db.driveFolder.findUnique({ where: { slug }, select: { id: true } });
+    if (!folder) return { error: "missing" };
+    await db.driveFolder.update({ where: { id: folder.id }, data });
+  } else {
+    const file = await db.driveFile.findUnique({ where: { slug }, select: { id: true } });
+    if (!file) return { error: "missing" };
+    await db.driveFile.update({ where: { id: file.id }, data });
+  }
+  revalidatePath("/files");
+  if (kind === "file") revalidatePath(`/files/${slug}`);
   return { success: "saved" };
 }

@@ -119,7 +119,14 @@ export async function updateStudentProfileAction(_prev: ActionState, formData: F
   const dict = getDictionary(await getLocale());
   const userId = field(formData, "userId");
   if (!userId) return { error: dict.errors.invalid };
+  const email = field(formData, "email").toLowerCase();
+  if (email && !isEmail(email)) return { error: dict.errors.invalid };
+  if (email) {
+    const taken = await getPrisma().user.findFirst({ where: { email, NOT: { id: userId } }, select: { id: true } });
+    if (taken) return { error: dict.users.emailTaken };
+  }
   const amount = Number(field(formData, "defaultStipendAmount") || "0");
+  const confirmation = formData.getAll("hasBankConfirmation");
   await getPrisma().studentProfile.upsert({
     where: { userId },
     create: {
@@ -152,14 +159,56 @@ export async function updateStudentProfileAction(_prev: ActionState, formData: F
       emergencyContactName: optional(formData, "emergencyContactName"),
       emergencyContactPhone: optional(formData, "emergencyContactPhone"),
       notes: optional(formData, "notes"),
+      ...(confirmation.length > 0 ? { hasBankConfirmation: confirmation.includes("yes") } : {}),
     },
   });
   await getPrisma().user.update({
     where: { id: userId },
-    data: { phone: optional(formData, "phone") },
+    data: { phone: optional(formData, "phone"), ...(email ? { email } : {}) },
   });
   revalidatePath(`/students/${userId}`);
+  revalidatePath("/students");
+  revalidatePath("/users");
+  revalidatePath("/stipends");
   return { success: dict.common.saved };
+}
+
+export async function saveStudentAccountAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requirePermission("manage_users_and_roles");
+  const dict = getDictionary(await getLocale());
+  const userId = field(formData, "userId");
+  const email = field(formData, "email").toLowerCase();
+  if (!userId || !isEmail(email)) return { error: dict.errors.invalid };
+  const taken = await getPrisma().user.findFirst({ where: { email, NOT: { id: userId } }, select: { id: true } });
+  if (taken) return { error: dict.users.emailTaken };
+  const confirmation = formData.getAll("hasBankConfirmation");
+  await getPrisma().user.update({ where: { id: userId }, data: { email, phone: optional(formData, "phone") } });
+  await getPrisma().studentProfile.update({
+    where: { userId },
+    data: {
+      bankName: optional(formData, "bankName"),
+      bankBranch: optional(formData, "bankBranch"),
+      bankAccountNumber: optional(formData, "bankAccountNumber"),
+      ...(confirmation.length > 0 ? { hasBankConfirmation: confirmation.includes("yes") } : {}),
+    },
+  });
+  revalidatePath("/students");
+  revalidatePath("/users");
+  revalidatePath("/stipends");
+  revalidatePath(`/students/${userId}`);
+  return { success: dict.common.saved };
+}
+
+export async function resetStudentPasswordAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requirePermission("manage_users_and_roles");
+  const dict = getDictionary(await getLocale());
+  const userId = field(formData, "userId");
+  const profile = await getPrisma().studentProfile.findUnique({ where: { userId }, select: { nationalId: true } });
+  if (!profile?.nationalId || !/^\d{9}$/.test(profile.nationalId)) return { error: dict.errors.invalid };
+  await getPrisma().user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(profile.nationalId) } });
+  revalidatePath("/users");
+  revalidatePath(`/students/${userId}`);
+  return { success: dict.users.passwordReset };
 }
 
 export async function createRoleAction(_prev: ActionState, formData: FormData): Promise<ActionState> {

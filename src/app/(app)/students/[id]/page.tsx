@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { TabLinks } from "@/components/tab-links";
 import { Badge } from "@/components/ui/badge";
 import { Input, Textarea } from "@/components/ui/input";
-import { canSeeFinance, canSeeStaffNotes, canViewStudent } from "@/lib/access";
+import { canSeeFinance, canSeeStaffNotes, canViewStudent, isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
 import { asNumber, formatDate, formatMoney, formatMonth, formatPercent } from "@/lib/format";
@@ -29,6 +29,7 @@ export default async function StudentPage({
   const locale = (await getLocale()) as Locale;
   const dict = getDictionary(locale);
   const { id } = await params;
+  if (isStudentPortal(session)) redirect(id === session.id ? "/student-board" : "/dashboard?notice=forbidden");
   if (!(await canViewStudent(session, id))) redirect("/dashboard?notice=forbidden");
   const db = getPrisma();
   const student = await db.user.findUnique({
@@ -206,6 +207,7 @@ export default async function StudentPage({
             <ActionForm action={updateStudentProfileAction} className="grid gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4 lg:col-span-2">
               <input type="hidden" name="userId" value={student.id} />
               <div className="grid gap-3 sm:grid-cols-2">
+                <Input name="email" type="email" defaultValue={student.email} placeholder={dict.common.email} />
                 <Input name="phone" defaultValue={student.phone ?? ""} placeholder={dict.common.phone} />
                 <Input name="nationalId" defaultValue={profile?.nationalId ?? ""} placeholder={dict.students.nationalId} />
                 <Input name="dateOfBirth" type="date" defaultValue={profile?.dateOfBirth ? profile.dateOfBirth.toISOString().slice(0, 10) : ""} />

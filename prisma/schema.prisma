@@ -80,8 +80,15 @@ enum DriveCohort {
 }
 
 enum DriveVisibility {
-  STAFF
-  SHARED
+  MANAGERS_ONLY
+  ALL_STUDENTS
+  SPECIFIC_COURSES
+  SPECIFIC_STUDENTS
+}
+
+enum DriveAccess {
+  VIEW
+  EDIT
 }
 
 enum ScheduleCategory {
@@ -178,7 +185,8 @@ model StudentProfile {
   id                    String    @id @default(cuid())
   userId                String    @unique
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  nationalId            String?
+  nationalId            String?   @unique
+  nameHe                String?
   dateOfBirth           DateTime?
   gender                String?
   address               String?
@@ -201,7 +209,6 @@ model StudentProfile {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  @@index([nationalId])
   @@index([cohort])
 }
 
@@ -473,11 +480,14 @@ model DriveFolder {
   parent     DriveFolder?     @relation("DriveTree", fields: [parentId], references: [id], onDelete: Cascade)
   children   DriveFolder[]    @relation("DriveTree")
   files      DriveFile[]
-  cohort     DriveCohort      @default(GENERAL)
-  visibility DriveVisibility  @default(STAFF)
-  sortOrder  Int              @default(0)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  cohort           DriveCohort     @default(GENERAL)
+  visibility       DriveVisibility @default(MANAGERS_ONLY)
+  access           DriveAccess     @default(VIEW)
+  allowedUserIds   String[]        @default([])
+  allowedCourseIds String[]        @default([])
+  sortOrder        Int             @default(0)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
   @@index([parentId])
 }
@@ -489,9 +499,12 @@ model DriveFile {
   folderId   String
   folder     DriveFolder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
   kind       DriveKind
-  cohort     DriveCohort      @default(GENERAL)
-  visibility DriveVisibility  @default(STAFF)
-  columns    Json?
+  cohort           DriveCohort     @default(GENERAL)
+  visibility       DriveVisibility @default(MANAGERS_ONLY)
+  access           DriveAccess     @default(VIEW)
+  allowedUserIds   String[]        @default([])
+  allowedCourseIds String[]        @default([])
+  columns          Json?
   rows       Json?
   body       String?
   linkUrl    String?

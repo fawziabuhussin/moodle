@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { cn, fullName, initials } from "@/lib/utils";
+import { AccountEditor } from "@/components/students/account-editor";
 import { createUserAction } from "@/server/actions/people";
 import { ensureStudentStipendAction } from "@/server/actions/finance";
 
@@ -18,7 +19,11 @@ export type DirectoryStudent = {
   firstName: string;
   lastName: string;
   badge: string | null;
+  email?: string | null;
   phone: string | null;
+  bankName?: string | null;
+  bankBranch?: string | null;
+  bankAccount?: string | null;
   track: string | null;
   courses: { id: string; code: string; title: string }[];
   attendancePercent: number | null;
@@ -75,6 +80,10 @@ export type DirectoryLabels = {
   bank: string;
   bankYes: string;
   bankNo: string;
+  saveAccount: string;
+  resetPassword: string;
+  branch: string;
+  accountNumber: string;
   openProfile: string;
   activeYear: string;
   archiveYear: string;
@@ -140,7 +149,7 @@ export function StudentsDirectory({
       if (filter.startsWith("track:") && student.track !== filter.slice(6)) return false;
       if (filter.startsWith("course:") && !student.courses.some((course) => course.id === filter.slice(7))) return false;
       if (!needle) return true;
-      const haystack = [fullName(student), student.nameAr, student.nationalId, student.badge, student.phone, student.track, student.cohort, ...student.courses.map((course) => `${course.code} ${course.title}`)]
+      const haystack = [fullName(student), student.nameAr, student.email, student.nationalId, student.badge, student.phone, student.bankName, student.bankAccount, student.track, student.cohort, ...student.courses.map((course) => `${course.code} ${course.title}`)]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
@@ -246,6 +255,9 @@ export function StudentsDirectory({
             <tr className="h-9">
               <th className="sticky start-0 z-10 border-e border-slate-200 bg-slate-50 px-3 text-start font-medium">{labels.name}</th>
               <th className="px-3 text-start font-medium">{labels.badge}</th>
+              <th className="px-3 text-start font-medium">{labels.phone}</th>
+              <th className="px-3 text-start font-medium">{labels.nationalId}</th>
+              <th className="px-3 text-start font-medium">{labels.bank}</th>
               <th className="px-3 text-start font-medium">{labels.track}</th>
               <th className="px-3 text-start font-medium">{labels.attendance}</th>
               <th className="px-3 text-start font-medium">{labels.thisMonth}</th>
@@ -263,10 +275,14 @@ export function StudentsDirectory({
                       <span className="min-w-0">
                         <span className="block max-w-[12rem] truncate font-medium">{fullName(student)}</span>
                         {student.nameAr && student.nameAr !== fullName(student) ? <span className="block max-w-[12rem] truncate text-[11px] text-slate-400">{student.nameAr}</span> : null}
+                        {student.email ? <span className="block max-w-[12rem] truncate text-[11px] text-slate-400"><Ltr>{student.email}</Ltr></span> : null}
                       </span>
                     </button>
                   </td>
                   <td className="px-3"><Ltr>{student.badge || "—"}</Ltr></td>
+                  <td className="px-3"><Ltr>{student.phone || "—"}</Ltr></td>
+                  <td className="px-3"><Ltr>{student.nationalId || "—"}</Ltr></td>
+                  <td className="max-w-[12rem] px-3 text-xs text-slate-600"><Ltr>{[student.bankName, student.bankBranch, student.bankAccount].filter(Boolean).join(" · ") || (student.bankConfirmed ? labels.bankYes : labels.bankNo)}</Ltr></td>
                   <td className="max-w-[10rem] truncate px-3 text-slate-700">{student.track || "—"}</td>
                   <td className="px-3">
                     <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", tone.badge)}>
@@ -321,7 +337,9 @@ export function StudentsDirectory({
                   <Fact label={labels.volunteering} value={profile.volunteering} />
                   <Fact label={labels.nationalId} value={profile.nationalId ? <Ltr>{profile.nationalId}</Ltr> : null} />
                   <Fact label={labels.phone} value={profile.phone ? <Ltr>{profile.phone}</Ltr> : null} />
+                  <Fact label={labels.email} value={profile.email ? <Ltr>{profile.email}</Ltr> : null} />
                   <Fact label={labels.bank} value={profile.bankConfirmed ? labels.bankYes : labels.bankNo} />
+                  <Fact label={labels.bank} value={[profile.bankName, profile.bankBranch, profile.bankAccount].filter(Boolean).join(" · ") || null} />
                   <Fact label={labels.lastSession} value={profile.lastSession || labels.noSession} />
                 </dl>
                 {profile.courses.length > 0 ? (
@@ -333,6 +351,22 @@ export function StudentsDirectory({
                 ) : null}
                 <div className="mt-5 flex flex-wrap gap-2">
                   <Button asChild><Link href={`/students/${profile.id}`}>{labels.viewProfile}</Link></Button>
+                  {canAdd ? (
+                    <AccountEditor
+                      account={{ id: profile.id, email: profile.email ?? "", phone: profile.phone, nationalId: profile.nationalId ?? null, bankName: profile.bankName ?? null, bankBranch: profile.bankBranch ?? null, bankAccount: profile.bankAccount ?? null, bankConfirmed: Boolean(profile.bankConfirmed) }}
+                      editLabel={labels.viewProfile}
+                      resetLabel={labels.resetPassword}
+                      saveLabel={labels.saveAccount}
+                      savingLabel={labels.saving}
+                      closeLabel={labels.close}
+                      emailLabel={labels.email}
+                      phoneLabel={labels.phone}
+                      bankLabel={labels.bank}
+                      branchLabel={labels.branch}
+                      accountLabel={labels.accountNumber}
+                      confirmationLabel={labels.bankYes}
+                    />
+                  ) : null}
                   {canLog ? <Button asChild variant="outline"><Link href={`/sessions?studentId=${profile.id}`}>{labels.logSession}</Link></Button> : null}
                   {canStipend ? (
                     <Button type="button" variant="outline" disabled={stipendFor === profile.id} onClick={() => addStipend(profile.id)}>{labels.addStipend}</Button>

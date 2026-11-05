@@ -12,6 +12,7 @@ export function AppShell({
   locale,
   dict,
   links,
+  flat = false,
   unread,
   user,
   children,
@@ -19,6 +20,7 @@ export function AppShell({
   locale: Locale;
   dict: Dictionary;
   links: ShellLink[];
+  flat?: boolean;
   unread: number;
   user: { firstName: string; lastName: string; email: string; roleNames: string[] };
   children: ReactNode;
@@ -32,7 +34,7 @@ export function AppShell({
           </Link>
           <SideNav
             links={links}
-            sections={{ academic: dict.nav.academic, admin: dict.nav.administration, system: dict.nav.system }}
+            sections={flat ? { academic: "", admin: "", system: "" } : { academic: dict.nav.academic, admin: dict.nav.administration, system: dict.nav.system }}
           />
         </aside>
         <div className="min-w-0 md:ps-72">
@@ -47,6 +49,7 @@ export function AppShell({
           <main className="min-w-0 px-4 pt-4 pb-[max(6rem,calc(6rem+env(safe-area-inset-bottom)))] md:px-8 md:pt-5 md:pb-10">{children}</main>
         </div>
         <BottomNav
+          flat={flat}
           links={links}
           moreLabel={dict.nav.more}
           closeLabel={dict.attendance.close}

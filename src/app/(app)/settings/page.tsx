@@ -1,4 +1,5 @@
 import { SyncRosterButton } from "@/components/files/sync-button";
+import { SeedAccountsButton } from "@/components/users/seed-accounts-button";
 import { ActionForm, SubmitButton } from "@/components/form";
 import { Ltr } from "@/components/ltr";
 import { PageHeader } from "@/components/page-header";
@@ -6,11 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input, Select } from "@/components/ui/input";
 import { saveCourseAttendanceSettingsAction, saveGlobalAttendanceSettingsAction } from "@/server/actions/attendance";
 import { getLocale, requirePermission } from "@/lib/auth";
+import { hasPermission } from "@/lib/permissions";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
 
 export default async function SettingsPage() {
-  await requirePermission("configure_attendance_settings");
+  const session = await requirePermission("configure_attendance_settings");
+  const canSeed = hasPermission(session.permissions, "manage_users_and_roles");
   const dict = getDictionary(await getLocale());
   const db = getPrisma();
   const [globalSetting, courses, overrides] = await Promise.all([
@@ -94,6 +97,17 @@ export default async function SettingsPage() {
             <SyncRosterButton label="סנכרון הרשימה האמיתית" pendingLabel={dict.common.saving} done={dict.common.saved} />
           </CardContent>
         </Card>
+        {canSeed ? (
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>{dict.users.seedAccounts}</CardTitle>
+              <CardDescription>{dict.users.seedDone.replace("{n}", "45")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SeedAccountsButton label={dict.users.seedAccounts} pendingLabel={dict.common.saving} done={dict.users.seedDone} />
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </div>
   );

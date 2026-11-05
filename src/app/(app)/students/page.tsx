@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { StudentsDirectory } from "@/components/students/directory";
 import { PageHeader } from "@/components/page-header";
+import { isStudentPortal } from "@/lib/access";
 import { getLocale, requireUser } from "@/lib/auth";
 import type { Locale } from "@/lib/constants";
 import { asNumber, formatDate, formatMoney, formatPercent } from "@/lib/format";
@@ -13,6 +14,7 @@ import { appTimeZone, currentPeriod, monthRange } from "@/lib/time";
 
 export default async function StudentsPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const session = await requireUser();
+  if (isStudentPortal(session)) redirect("/student-board");
   const locale = (await getLocale()) as Locale;
   const dict = getDictionary(locale);
   const staff = hasAnyPermission(session.permissions, [
@@ -94,7 +96,11 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
       firstName: student.firstName,
       lastName: student.lastName,
       badge: student.hardwareBadgeId,
+      email: student.email,
       phone: student.phone,
+      bankName: student.studentProfile?.bankName ?? null,
+      bankBranch: student.studentProfile?.bankBranch ?? null,
+      bankAccount: student.studentProfile?.bankAccountNumber ?? null,
       track: student.studentProfile?.academicTrack ?? null,
       courses: student.enrollments.map((enrollment) => ({
         id: enrollment.course.id,
@@ -172,6 +178,10 @@ export default async function StudentsPage({ searchParams }: { searchParams: Pro
           bank: dict.students.bankConfirmation,
           bankYes: dict.students.bankConfirmed,
           bankNo: dict.students.bankMissing,
+          saveAccount: dict.common.save,
+          resetPassword: dict.users.resetPassword,
+          branch: dict.students.bankBranch,
+          accountNumber: dict.students.bankAccount,
           openProfile: dict.students.viewProfile,
           activeYear: dict.students.activeYear,
           archiveYear: dict.students.archiveYear,

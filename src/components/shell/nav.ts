@@ -26,7 +26,13 @@ export type NavKey =
   | "roles"
   | "settings"
   | "terminal"
-  | "files";
+  | "files"
+  | "studentDashboard"
+  | "studentBoard"
+  | "studentNotifications"
+  | "studentFiles"
+  | "studentStipends"
+  | "studentCourses";
 
 export type NavSection = "academic" | "admin" | "system";
 
@@ -54,4 +60,13 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/roles", key: "roles", icon: "roles", section: "admin", permission: "manage_users_and_roles" },
   { href: "/settings", key: "settings", icon: "settings", section: "system", permission: "configure_attendance_settings" },
   { href: "/terminal", key: "terminal", icon: "terminal", section: "system", permission: "manage_attendance" },
+];
+
+export const STUDENT_NAV: NavItem[] = [
+  { href: "/dashboard", key: "studentDashboard", icon: "home", section: "academic" },
+  { href: "/student-board", key: "studentBoard", icon: "students", section: "academic" },
+  { href: "/notifications", key: "studentNotifications", icon: "bell", section: "academic" },
+  { href: "/files", key: "studentFiles", icon: "files", section: "academic" },
+  { href: "/stipends", key: "studentStipends", icon: "wallet", section: "academic" },
+  { href: "/courses", key: "studentCourses", icon: "courses", section: "academic" },
 ];

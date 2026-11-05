@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ["127.0.0.1"],
   serverExternalPackages: [
     "@prisma/client",
     "@prisma/adapter-neon",

@@ -4,6 +4,8 @@ import { ActionForm, SubmitButton } from "@/components/form";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { AccountEditor } from "@/components/students/account-editor";
+import { SeedAccountsButton } from "@/components/users/seed-accounts-button";
 import { createUserAction } from "@/server/actions/people";
 import { getLocale, requirePermission } from "@/lib/auth";
 import { getDictionary } from "@/lib/i18n";
@@ -15,7 +17,7 @@ export default async function UsersPage() {
   const dict = getDictionary(await getLocale());
   const [users, roles] = await Promise.all([
     getPrisma().user.findMany({
-      include: { roles: { include: { role: true } } },
+      include: { roles: { include: { role: true } }, studentProfile: true },
       orderBy: { firstName: "asc" },
     }),
     getPrisma().role.findMany({ orderBy: { name: "asc" } }),
@@ -23,7 +25,7 @@ export default async function UsersPage() {
 
   return (
     <div>
-      <PageHeader title={dict.users.title} description={dict.users.subtitle} />
+      <PageHeader title={dict.users.title} description={dict.users.subtitle} action={<SeedAccountsButton label={dict.users.seedAccounts} pendingLabel={dict.common.saving} done={dict.users.seedDone} />} />
       <div className="grid gap-4 xl:grid-cols-[340px_1fr]">
         <ActionForm action={createUserAction} className="grid h-fit gap-3 rounded-2xl border border-slate-200/80 bg-card shadow-sm p-4">
           <h2 className="font-semibold">{dict.users.createTitle}</h2>
@@ -61,7 +63,8 @@ export default async function UsersPage() {
               </div>
               <p className="truncate text-xs text-muted-foreground"><Ltr>{user.email}</Ltr></p>
               <p className="mt-1 truncate text-xs text-slate-600">{user.roles.map((entry) => entry.role.name).join(", ") || "—"}</p>
-              <p className="text-xs text-muted-foreground"><Ltr>{user.hardwareBadgeId || "—"}</Ltr></p>
+              <p className="text-xs text-muted-foreground"><Ltr>{user.hardwareBadgeId || "—"}</Ltr> · <Ltr>{user.phone || "—"}</Ltr> · <Ltr>{user.studentProfile?.nationalId || "—"}</Ltr></p>
+              {user.studentProfile ? <AccountEditor account={{ id: user.id, email: user.email, phone: user.phone, nationalId: user.studentProfile.nationalId, bankName: user.studentProfile.bankName, bankBranch: user.studentProfile.bankBranch, bankAccount: user.studentProfile.bankAccountNumber, bankConfirmed: user.studentProfile.hasBankConfirmation }} editLabel={dict.users.viewEdit} resetLabel={dict.users.resetPassword} saveLabel={dict.common.save} savingLabel={dict.common.saving} closeLabel={dict.attendance.close} emailLabel={dict.common.email} phoneLabel={dict.common.phone} bankLabel={dict.students.bankName} branchLabel={dict.students.bankBranch} accountLabel={dict.students.bankAccount} confirmationLabel={dict.students.bankConfirmation} /> : null}
             </li>
           ))}
         </ul>
@@ -72,6 +75,9 @@ export default async function UsersPage() {
                 <th className="px-4 py-3 text-start font-medium">{dict.common.name}</th>
                 <th className="px-4 py-3 text-start font-medium">{dict.users.roles}</th>
                 <th className="px-4 py-3 text-start font-medium">{dict.users.badge}</th>
+                <th className="px-4 py-3 text-start font-medium">{dict.common.phone}</th>
+                <th className="px-4 py-3 text-start font-medium">{dict.students.nationalId}</th>
+                <th className="px-4 py-3 text-start font-medium">{dict.students.bankName}</th>
                 <th className="px-4 py-3 text-start font-medium">{dict.common.status}</th>
               </tr>
             </thead>
@@ -86,6 +92,12 @@ export default async function UsersPage() {
                   </td>
                   <td className="px-4 py-3">{user.roles.map((entry) => entry.role.name).join(", ")}</td>
                   <td className="px-4 py-3"><Ltr>{user.hardwareBadgeId || "—"}</Ltr></td>
+                  <td className="px-4 py-3"><Ltr>{user.phone || "—"}</Ltr></td>
+                  <td className="px-4 py-3"><Ltr>{user.studentProfile?.nationalId || "—"}</Ltr></td>
+                  <td className="px-4 py-3">
+                    <Ltr>{[user.studentProfile?.bankName, user.studentProfile?.bankBranch, user.studentProfile?.bankAccountNumber].filter(Boolean).join(" · ") || "—"}</Ltr>
+                    {user.studentProfile ? <AccountEditor account={{ id: user.id, email: user.email, phone: user.phone, nationalId: user.studentProfile.nationalId, bankName: user.studentProfile.bankName, bankBranch: user.studentProfile.bankBranch, bankAccount: user.studentProfile.bankAccountNumber, bankConfirmed: user.studentProfile.hasBankConfirmation }} editLabel={dict.users.viewEdit} resetLabel={dict.users.resetPassword} saveLabel={dict.common.save} savingLabel={dict.common.saving} closeLabel={dict.attendance.close} emailLabel={dict.common.email} phoneLabel={dict.common.phone} bankLabel={dict.students.bankName} branchLabel={dict.students.bankBranch} accountLabel={dict.students.bankAccount} confirmationLabel={dict.students.bankConfirmation} /> : null}
+                  </td>
                   <td className="px-4 py-3">
                     <Badge tone={user.isActive ? "ATTENDED" : "CANCELLED"}>{user.isActive ? dict.common.active : dict.common.inactive}</Badge>
                   </td>

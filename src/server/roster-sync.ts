@@ -7,7 +7,7 @@ import { COHORT_26_27_STUDENTS } from "../../prisma/data/cohort-26-27";
 type Column = { key: string; label: string };
 type Row = Record<string, string>;
 type Cohort = "COHORT_2026_2027" | "COHORT_2025_2026" | "GENERAL";
-type Visibility = "STAFF" | "SHARED";
+type Visibility = "MANAGERS_ONLY" | "ALL_STUDENTS" | "SPECIFIC_COURSES" | "SPECIFIC_STUDENTS";
 
 type FolderSpec = {
   slug: string;
@@ -68,7 +68,10 @@ function splitName(name: string) {
 }
 
 function parseDob(value: string) {
-  const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  const match = iso
+    ? [iso[0], iso[3], iso[2], iso[1]]
+    : /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
   if (!match) return null;
   const day = Number(match[1]);
   const month = Number(match[2]);
@@ -122,6 +125,9 @@ function cohort2Row(student: (typeof COHORT_26_27_STUDENTS)[number]): Row {
     volunteering: student.volunteering,
     stipendApproval: student.stipendApproval,
     hasBankConfirmation: student.hasBankConfirmation ? "true" : "false",
+    bankName: student.bankName,
+    bankBranch: student.bankBranch,
+    bankAccount: student.bankAccount,
   };
 }
 
@@ -178,7 +184,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: PROFILE_COLUMNS,
       rows: c2,
       syncKey: "active-2627",
@@ -190,7 +196,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nameHe", label: "שם" },
@@ -214,7 +220,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "SHARED",
+      visibility: "ALL_STUDENTS",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nationalId", label: "ת.ז" },
@@ -231,7 +237,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "phone", label: "هاتف" },
@@ -247,7 +253,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "phone", label: "هاتف" },
@@ -262,7 +268,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "SHARED",
+      visibility: "ALL_STUDENTS",
       columns: [
         { key: "month", label: "الشهر" },
         { key: "week", label: "الأسبوع" },
@@ -278,7 +284,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "SHARED",
+      visibility: "ALL_STUDENTS",
       columns: [
         { key: "kind", label: "النوع" },
         { key: "title", label: "العنوان" },
@@ -294,7 +300,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "workshop", label: "סדנה" },
         { key: "date", label: "תאריך" },
@@ -310,7 +316,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "item", label: "بند" },
         { key: "category", label: "קטגוריה" },
@@ -326,7 +332,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2026-2027",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "workstream", label: "משימה" },
         { key: "start", label: "התחלה" },
@@ -342,7 +348,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         ...PROFILE_COLUMNS,
         { key: "bankName", label: "البنك" },
@@ -359,7 +365,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: monthColumns(MONTHS_25),
       rows: stipend25,
       syncKey: "cohort1-stipends",
@@ -371,7 +377,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nationalId", label: "ת.ז" },
@@ -397,7 +403,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "university", label: "الجامعة" },
@@ -413,7 +419,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "track", label: "المسار" },
@@ -429,7 +435,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nationalId", label: "ת.ז" },
@@ -445,7 +451,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "cohort-2025-2026",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "item", label: "العنصر" },
         { key: "place", label: "المكان" },
@@ -461,7 +467,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "assoc-2627",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "status", label: "الحالة" },
@@ -476,7 +482,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "assoc-2526",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "status", label: "الحالة" },
@@ -491,7 +497,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "followup-2526",
       kind: "SHEET",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nationalId", label: "ת.ז" },
@@ -506,7 +512,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: PROFILE_COLUMNS,
       rows: c2,
       syncKey: "participants-2627",
@@ -518,7 +524,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nationalId", label: "رقم الهوية" },
@@ -544,7 +550,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "GENERAL",
-      visibility: "SHARED",
+      visibility: "ALL_STUDENTS",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nationalId", label: "ת.ז" },
@@ -560,7 +566,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "nameHe", label: "שם" },
@@ -578,7 +584,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "GENERAL",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "vendor", label: "הספק" },
         { key: "category", label: "النوع" },
@@ -600,7 +606,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "DOC",
       cohort: "GENERAL",
-      visibility: "SHARED",
+      visibility: "ALL_STUDENTS",
       body: [
         "لجان مركز انطلاقة",
         "",
@@ -621,7 +627,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "GENERAL",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "phone", label: "الهاتف" },
@@ -637,7 +643,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "SHEET",
       cohort: "GENERAL",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       columns: [
         { key: "nameAr", label: "الاسم" },
         { key: "phone", label: "الهاتف" },
@@ -652,7 +658,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "FORM_LINK",
       cohort: "GENERAL",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       body: "الحقول: البريد، الاسم بالعبرية، تاريخ الميلاد، رقم الهوية، وحالة אישור ניהול חשבון. الردود محفوظة في قائمة المشتركين.",
       linkUrl: "/files/participants-2627",
       sortOrder: 38,
@@ -663,7 +669,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "entilaka-jatt",
       kind: "FORM_LINK",
       cohort: "GENERAL",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       body: "رفع אישור ניהול חשבון يحدّث شارة الأهلية في ملف الطالب.",
       linkUrl: "/files?folder=forms-bank-confirmations",
       sortOrder: 39,
@@ -677,7 +683,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "forms-bank-confirmations",
       kind: "PDF_UPLOAD",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       body: student.hasBankConfirmation ? "uploaded" : "missing",
       studentBadge: student.badgeId,
       sortOrder: 100,
@@ -688,7 +694,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "bank-2627",
       kind: "PDF_UPLOAD",
       cohort: "COHORT_2026_2027",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       body: student.hasBankConfirmation ? "uploaded" : "missing",
       studentBadge: student.badgeId,
       sortOrder: 100,
@@ -701,7 +707,7 @@ function buildFiles(): FileSpec[] {
       folderSlug: "bank-2526",
       kind: "PDF_UPLOAD",
       cohort: "COHORT_2025_2026",
-      visibility: "STAFF",
+      visibility: "MANAGERS_ONLY",
       body: student.bankAccount ? "uploaded" : "missing",
       studentBadge: student.badgeId,
       sortOrder: 100,
@@ -711,15 +717,15 @@ function buildFiles(): FileSpec[] {
 }
 
 const FOLDERS: FolderSpec[] = [
-  { slug: "entilaka-jatt", name: "انطلاقة- جت", parentSlug: null, cohort: "GENERAL", visibility: "STAFF", sortOrder: 0 },
-  { slug: "forms-bank-confirmations", name: "فورمز لرفع \"אישור ניהול חשבון\" (File responses)", parentSlug: "entilaka-jatt", cohort: "GENERAL", visibility: "STAFF", sortOrder: 1 },
-  { slug: "cohort-2026-2027", name: "2026-2027 (الفوج الثاني - תשפ\"ז)", parentSlug: "entilaka-jatt", cohort: "COHORT_2026_2027", visibility: "STAFF", sortOrder: 2 },
-  { slug: "bank-2627", name: "אישור ניהול חשבון", parentSlug: "cohort-2026-2027", cohort: "COHORT_2026_2027", visibility: "STAFF", sortOrder: 1 },
-  { slug: "assoc-2627", name: "אישור עמותה", parentSlug: "cohort-2026-2027", cohort: "COHORT_2026_2027", visibility: "STAFF", sortOrder: 2 },
-  { slug: "cohort-2025-2026", name: "2025-2026 (الفوج الأول - תשפ\"ו)", parentSlug: "entilaka-jatt", cohort: "COHORT_2025_2026", visibility: "STAFF", sortOrder: 3 },
-  { slug: "bank-2526", name: "אישור ניהול חשבון", parentSlug: "cohort-2025-2026", cohort: "COHORT_2025_2026", visibility: "STAFF", sortOrder: 1 },
-  { slug: "assoc-2526", name: "אישורי עמותה", parentSlug: "cohort-2025-2026", cohort: "COHORT_2025_2026", visibility: "STAFF", sortOrder: 2 },
-  { slug: "followup-2526", name: "ملف متابعة الطلاب", parentSlug: "cohort-2025-2026", cohort: "COHORT_2025_2026", visibility: "STAFF", sortOrder: 3 },
+  { slug: "entilaka-jatt", name: "انطلاقة- جت", parentSlug: null, cohort: "GENERAL", visibility: "MANAGERS_ONLY", sortOrder: 0 },
+  { slug: "forms-bank-confirmations", name: "فورمز لرفع \"אישור ניהול חשבון\" (File responses)", parentSlug: "entilaka-jatt", cohort: "GENERAL", visibility: "MANAGERS_ONLY", sortOrder: 1 },
+  { slug: "cohort-2026-2027", name: "2026-2027 (الفوج الثاني - תשפ\"ז)", parentSlug: "entilaka-jatt", cohort: "COHORT_2026_2027", visibility: "MANAGERS_ONLY", sortOrder: 2 },
+  { slug: "bank-2627", name: "אישור ניהול חשבון", parentSlug: "cohort-2026-2027", cohort: "COHORT_2026_2027", visibility: "MANAGERS_ONLY", sortOrder: 1 },
+  { slug: "assoc-2627", name: "אישור עמותה", parentSlug: "cohort-2026-2027", cohort: "COHORT_2026_2027", visibility: "MANAGERS_ONLY", sortOrder: 2 },
+  { slug: "cohort-2025-2026", name: "2025-2026 (الفوج الأول - תשפ\"ו)", parentSlug: "entilaka-jatt", cohort: "COHORT_2025_2026", visibility: "MANAGERS_ONLY", sortOrder: 3 },
+  { slug: "bank-2526", name: "אישור ניהול חשבון", parentSlug: "cohort-2025-2026", cohort: "COHORT_2025_2026", visibility: "MANAGERS_ONLY", sortOrder: 1 },
+  { slug: "assoc-2526", name: "אישורי עמותה", parentSlug: "cohort-2025-2026", cohort: "COHORT_2025_2026", visibility: "MANAGERS_ONLY", sortOrder: 2 },
+  { slug: "followup-2526", name: "ملف متابعة الطلاب", parentSlug: "cohort-2025-2026", cohort: "COHORT_2025_2026", visibility: "MANAGERS_ONLY", sortOrder: 3 },
 ];
 
 async function upsertStudent(
@@ -747,16 +753,16 @@ async function upsertStudent(
   },
 ) {
   const email = input.email.trim().toLowerCase();
-  const existing = await db.user.findFirst({
-    where: {
-      OR: [
-        { hardwareBadgeId: input.badgeId },
-        { email },
-        { studentProfile: { nationalId: input.nationalId } },
-      ],
-    },
-    include: { studentProfile: true },
-  });
+  const byNationalId = input.nationalId
+    ? await db.user.findFirst({
+        where: { studentProfile: { is: { nationalId: input.nationalId } } },
+        include: { studentProfile: true },
+      })
+    : null;
+  const byEmail = byNationalId
+    ? null
+    : await db.user.findUnique({ where: { email }, include: { studentProfile: true } });
+  const existing = byNationalId ?? byEmail;
   const names = splitName(input.nameHe || input.nameAr);
   const profile = {
     nationalId: input.nationalId,
@@ -767,12 +773,29 @@ async function upsertStudent(
     cohort: input.cohort,
     psychometryTrack: input.psychometryTrack || null,
     volunteeringPlace: input.volunteering || null,
+    nameHe: input.nameHe || null,
     stipendApproval: input.stipendApproval || null,
     hasBankConfirmation: input.hasBankConfirmation,
     bankName: input.bankName || null,
     bankBranch: input.bankBranch || null,
     bankAccountNumber: input.bankAccount || null,
   };
+
+  if (input.badgeId) {
+    await db.user.updateMany({
+      where: { hardwareBadgeId: input.badgeId, ...(existing ? { NOT: { id: existing.id } } : {}) },
+      data: { hardwareBadgeId: null },
+    });
+  }
+  if (existing) {
+    const emailOwner = await db.user.findUnique({ where: { email }, select: { id: true } });
+    if (emailOwner && emailOwner.id !== existing.id) {
+      await db.user.update({
+        where: { id: emailOwner.id },
+        data: { email: `archived-${emailOwner.id}@entilaka.local` },
+      });
+    }
+  }
 
   if (!existing) {
     const created = await db.user.create({
@@ -794,10 +817,12 @@ async function upsertStudent(
   await db.user.update({
     where: { id: existing.id },
     data: {
+      email,
       firstName: names.firstName,
       lastName: names.lastName,
       phone: input.phone,
-      hardwareBadgeId: existing.hardwareBadgeId ?? input.badgeId,
+      hardwareBadgeId: input.badgeId,
+      isActive: true,
     },
   });
   if (existing.studentProfile) {

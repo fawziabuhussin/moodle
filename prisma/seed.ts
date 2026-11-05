@@ -6,6 +6,7 @@ import { hash } from "bcryptjs";
 import ws from "ws";
 import { PERMISSIONS } from "../src/lib/permissions";
 import { syncRealRoster } from "../src/server/roster-sync";
+import { provisionCohortAccounts } from "../src/server/provision-accounts";
 export { COHORT_26_27_STUDENTS } from "./data/cohort-26-27";
 import { attendanceSnapshot, computeStipend } from "../src/lib/stipends";
 import { calendarDateFromISO, evaluateArrival, todayISO, zonedDateTime } from "../src/lib/time";
@@ -115,6 +116,12 @@ async function main() {
     };
   }) {
     const passwordHash = await hash(input.password, 10);
+    if (input.hardwareBadgeId) {
+      await prisma.user.updateMany({
+        where: { hardwareBadgeId: input.hardwareBadgeId, NOT: { email: input.email } },
+        data: { hardwareBadgeId: null },
+      });
+    }
     const user = await prisma.user.upsert({
       where: { email: input.email },
       update: {
@@ -141,6 +148,12 @@ async function main() {
       },
     });
     if (input.profile) {
+      if (input.profile.nationalId) {
+        await prisma.studentProfile.updateMany({
+          where: { nationalId: input.profile.nationalId, NOT: { userId: user.id } },
+          data: { nationalId: null },
+        });
+      }
       await prisma.studentProfile.upsert({
         where: { userId: user.id },
         update: input.profile,
@@ -191,7 +204,7 @@ async function main() {
   });
 
   const adam = await upsertUser({
-    email: "student@entilaka.local",
+    email: "demo.adam@entilaka.local",
     password: "Student123!",
     firstName: "אדם",
     lastName: "שלו",
@@ -516,10 +529,11 @@ async function main() {
       },
     });
   }
+  const accounts = await provisionCohortAccounts(prisma);
   console.log("Seeded Entilaka demo data.");
   console.log("manager@entilaka.local / Manager123!");
   console.log("teacher@entilaka.local / Teacher123!");
-  console.log("student@entilaka.local / Student123!  badge STU-1001");
+  console.log(`Student accounts ready: ${accounts.count} (created ${accounts.created}, updated ${accounts.updated}). Initial password is each national ID.`);
   void coordinator;
 }
 

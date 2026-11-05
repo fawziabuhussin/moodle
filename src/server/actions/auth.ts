@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { attachSessionCookie, authenticate, clearSession, getLocale, getSession } from "@/lib/auth";
 import { LOCALE_COOKIE, isLocale } from "@/lib/constants";
-import { field, isEmail } from "@/lib/form";
+import { field, isLoginIdentifier } from "@/lib/form";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
 import type { ActionState } from "@/lib/types";
@@ -14,7 +14,7 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   const dict = getDictionary(await getLocale());
   const email = field(formData, "email").toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!isEmail(email) || password.length < 8) return { error: dict.login.invalid };
+  if (!isLoginIdentifier(email) || password.length < 8) return { error: dict.login.invalid };
 
   let result: Awaited<ReturnType<typeof authenticate>> = null;
   try {

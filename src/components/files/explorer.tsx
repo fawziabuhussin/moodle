@@ -1,8 +1,10 @@
 "use client";
 
+import type { DriveAccess, DriveVisibility } from "@prisma/client";
 import { ChevronRight, ExternalLink, FileSpreadsheet, FileText, Folder, LayoutGrid, Rows3, Search, Upload } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
+import { ShareButton, type ShareCopy } from "@/components/files/share-dialog";
 import { Ltr } from "@/components/ltr";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -14,7 +16,10 @@ export type ExplorerItem = {
   name: string;
   path: string;
   parentSlug: string | null;
-  visibility: "STAFF" | "SHARED";
+  visibility: DriveVisibility;
+  access: DriveAccess;
+  allowedUserIds: string[];
+  allowedCourseIds: string[];
 };
 
 const icons = {
@@ -39,11 +44,15 @@ export function FileExplorer({
   currentSlug,
   canEdit,
   copy,
+  students = [],
+  courses = [],
 }: {
   items: ExplorerItem[];
   crumbs: { slug: string; name: string }[];
   currentSlug: string;
   canEdit: boolean;
+  students?: { id: string; name: string; badge: string | null }[];
+  courses?: { id: string; code: string; title: string }[];
   copy: {
     search: string;
     grid: string;
@@ -61,7 +70,7 @@ export function FileExplorer({
     synced: string;
     kind: string;
     items: string;
-  };
+  } & ShareCopy;
 }) {
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"grid" | "table">("grid");
@@ -129,8 +138,8 @@ export function FileExplorer({
             const href = item.kind === "folder" ? `/files?folder=${item.slug}` : `/files/${item.slug}`;
             const count = item.kind === "folder" ? inside(item.slug) : null;
             return (
-              <li key={item.slug}>
-                <Link href={href} className="flex min-h-[92px] items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-3 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <li key={item.slug} className="flex min-h-[92px] items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-3 shadow-sm backdrop-blur transition-all hover:-translate-y-0.5 hover:shadow-md">
+                <Link href={href} className="flex min-w-0 flex-1 items-center gap-3 py-3">
                   <KindBadge kind={item.kind} />
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium">{item.name}</span>
@@ -140,6 +149,7 @@ export function FileExplorer({
                     </span>
                   </span>
                 </Link>
+                {canEdit ? <ShareButton item={{ ...item, kind: item.kind === "folder" ? "folder" : "file" }} students={students} courses={courses} copy={copy} /> : null}
               </li>
             );
           })}
@@ -171,6 +181,7 @@ export function FileExplorer({
                       {count != null ? <> · <Ltr>{count}</Ltr></> : null}
                     </td>
                     <td className="max-w-[16rem] truncate px-3 text-xs text-slate-400">{item.path}</td>
+                    {canEdit ? <td className="px-3"><ShareButton item={{ ...item, kind: item.kind === "folder" ? "folder" : "file" }} students={students} courses={courses} copy={copy} /></td> : null}
                   </tr>
                 );
               })}

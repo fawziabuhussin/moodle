@@ -55,7 +55,7 @@ export function SideNav({ links, sections }: { links: ShellLink[]; sections: Rec
       {links.map((link) => {
         const Icon = icons[link.icon];
         const on = active(pathname, link.href);
-        const heading = link.section !== previous;
+        const heading = link.section !== previous && Boolean(sections[link.section]);
         const divided = heading && previous !== "";
         previous = link.section;
         return (
@@ -83,6 +83,7 @@ const PRIMARY_HREFS = ["/dashboard", "/attendance", "/students", "/courses"];
 
 export function BottomNav({
   links,
+  flat = false,
   moreLabel,
   closeLabel,
   logoutLabel,
@@ -90,6 +91,7 @@ export function BottomNav({
   roleLine,
 }: {
   links: ShellLink[];
+  flat?: boolean;
   moreLabel: string;
   closeLabel: string;
   logoutLabel: string;
@@ -98,10 +100,12 @@ export function BottomNav({
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const primary = PRIMARY_HREFS.flatMap((href) => {
-    const link = links.find((item) => item.href === href || item.href.startsWith(`${href}/`));
-    return link ? [link] : [];
-  });
+  const primary = flat
+    ? links
+    : PRIMARY_HREFS.flatMap((href) => {
+        const link = links.find((item) => item.href === href || item.href.startsWith(`${href}/`));
+        return link ? [link] : [];
+      });
   const primaryHrefs = new Set(primary.map((link) => link.href));
   const extra = links.filter((link) => !primaryHrefs.has(link.href));
   const moreOn = open || extra.some((link) => active(pathname, link.href));
@@ -179,9 +183,9 @@ export function BottomNav({
           const Icon = icons[link.icon];
           const on = active(pathname, link.href);
           return (
-            <Link key={link.href} href={link.href} className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-medium", on ? "text-primary" : "text-slate-500")}>
+            <Link key={link.href} href={link.href} className={cn("flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl px-0.5 text-[10px] font-medium", on ? "text-primary" : "text-slate-500")}>
               <Icon className="size-5" />
-              <span className="max-w-full truncate">{link.label}</span>
+              <span className="line-clamp-2 max-w-full text-center leading-tight">{link.label}</span>
             </Link>
           );
         })}
