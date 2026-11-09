@@ -182,9 +182,7 @@ export function ManagerBoard({
           </Button>
         </div>
         {text.trim().length === 0 ? <p className="text-sm text-slate-500">{poll ? labels.noOrders : labels.noPoll}</p> : null}
-        <pre className={cn("whitespace-pre-wrap rounded-2xl bg-slate-50 p-4 text-sm leading-7 text-slate-900", text.trim().length === 0 && "hidden")} dir="rtl">
-          {text}
-        </pre>
+        <ClipboardPreview text={text} className="rounded-2xl bg-slate-50 p-4 text-slate-900" />
       </section>
 
       <History entries={history} labels={labels} />
@@ -328,7 +326,7 @@ function History({ entries, labels }: { entries: HistoryEntry[]; labels: FoodLab
               </span>
             </summary>
             <div className="grid gap-2 px-3 pb-3">
-              <pre className="whitespace-pre-wrap text-sm leading-7 text-slate-800" dir="rtl">{entry.clipboard || labels.noOrders}</pre>
+              {entry.clipboard ? <ClipboardPreview text={entry.clipboard} className="text-slate-800" /> : <p className="text-sm text-slate-500">{labels.noOrders}</p>}
               <Button type="button" variant="outline" disabled={entry.clipboard.trim().length === 0} onClick={() => copy(entry.id, entry.clipboard)}>
                 {copied === entry.id ? labels.copied : labels.copy}
               </Button>
@@ -337,6 +335,19 @@ function History({ entries, labels }: { entries: HistoryEntry[]; labels: FoodLab
         ))}
       </div>
     </section>
+  );
+}
+
+function ClipboardPreview({ text, className }: { text: string; className?: string }) {
+  if (!text.trim()) return null;
+  const parts = text.split(/(\*[^*\n]+\*)/g);
+  return (
+    <pre className={cn("whitespace-pre-wrap text-sm leading-7", className)} dir="rtl">
+      {parts.map((part, index) => {
+        const bold = part.startsWith("*") && part.endsWith("*") && part.length > 2;
+        return bold ? <strong key={index}>{part.slice(1, -1)}</strong> : <span key={index}>{part}</span>;
+      })}
+    </pre>
   );
 }
 
