@@ -1,5 +1,6 @@
 import "server-only";
 
+import { FOOD_ADDITIONS } from "@/lib/food";
 import { PERMISSIONS } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
 
@@ -50,6 +51,16 @@ export async function ensureFoodMenu() {
         category: "main",
         sortOrder: index,
       })),
+    });
+  }
+
+  const bare = await db.menuItem.findMany({
+    where: { restaurantId: restaurant.id, available: true, additions: { none: {} } },
+    select: { id: true },
+  });
+  for (const item of bare) {
+    await db.menuAddition.createMany({
+      data: FOOD_ADDITIONS.map((name, index) => ({ menuItemId: item.id, name, sortOrder: index })),
     });
   }
 

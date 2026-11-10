@@ -11,9 +11,31 @@ export function studentFoodName(person: { nameAr?: string | null; nameHe?: strin
   return `${person.firstName} ${person.lastName}`.trim();
 }
 
+export const FOOD_ADDITIONS = [
+  "حمص",
+  "طحينة",
+  "اليفاييم",
+  "ملفوف أبيض",
+  "مخلل",
+  "زيتون",
+  "كتشب",
+  "تشيلي",
+  "روتوفيم",
+  "بجيت",
+  "خبز أسود",
+  "بهار بيتسا",
+] as const;
+
+export const CHIPS_WITH = "مع بطاطا";
+export const CHIPS_WITHOUT = "بدون بطاطا";
+
 export function additionNames(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+  return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0).map(oneLine).filter(Boolean);
+}
+
+function oneLine(value: string | null | undefined) {
+  return value?.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim() ?? "";
 }
 
 function whatsappBold(value: string) {
@@ -22,7 +44,10 @@ function whatsappBold(value: string) {
 }
 
 export function foodOrderLine(name: string, item: string, additions: string[], notes: string | null | undefined) {
-  const details = [whatsappBold(arabicLabel(item)), ...additions.map(arabicLabel), notes?.trim()].filter(Boolean);
+  const extras = additions.map(oneLine).filter(Boolean);
+  const chips = extras.filter((entry) => entry === CHIPS_WITH || entry === CHIPS_WITHOUT);
+  const toppings = extras.filter((entry) => entry !== CHIPS_WITH && entry !== CHIPS_WITHOUT);
+  const details = [whatsappBold(arabicLabel(item)), ...toppings.map(arabicLabel), ...chips, oneLine(notes)].filter(Boolean);
   return `${name} - ${details.join(", ")}`;
 }
 

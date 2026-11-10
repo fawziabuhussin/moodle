@@ -1,15 +1,17 @@
 "use client";
 
 import * as Dialog from "@radix-ui/react-dialog";
+import { Plus, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
+import { FOOD_ADDITIONS } from "@/lib/food";
 import { cn } from "@/lib/utils";
 import { closeFoodPollAction, extendFoodPollAction, openFoodPollAction, saveFoodMenuAction } from "@/server/actions/food";
 
-type SavedMenu = { id: string; name: string; text: string };
+type SavedMenu = { id: string; name: string; text: string; additions: string };
 type HistoryEntry = { id: string; when: string; menuName: string; price: string | null; count: number; clipboard: string };
 
 export type FoodLabels = {
@@ -33,6 +35,14 @@ export type FoodLabels = {
   menu: string;
   menuName: string;
   menuItems: string;
+  dishes: string;
+  dishName: string;
+  addDish: string;
+  additions: string;
+  additionsHint: string;
+  additionName: string;
+  addAddition: string;
+  removeItem: string;
   saveMenu: string;
   newMenu: string;
   price: string;
@@ -260,43 +270,140 @@ function MenuEditor({
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
       <h2 className="text-lg font-semibold">{labels.menu}</h2>
       <p className="mt-1 text-sm text-slate-500">{labels.menuItems}</p>
-      <form
-        key={selected || "new"}
-        className="mt-3 grid gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSave(new FormData(event.currentTarget));
-        }}
-      >
-        <input type="hidden" name="restaurantId" value={restaurantId} />
-        <input type="hidden" name="menuId" value={selected} />
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm font-medium">
-            {labels.menu}
-            <Select value={selected} onChange={(event) => setSelected(event.target.value)}>
-              {menus.map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
-              ))}
-              <option value="">{labels.newMenu}</option>
-            </Select>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            {labels.menuName}
-            <Input name="name" defaultValue={menu?.name ?? ""} required />
-          </label>
-        </div>
-        <textarea
-          name="items"
-          required
-          rows={14}
-          defaultValue={menu?.text ?? ""}
-          dir="rtl"
-          className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-base leading-7 text-slate-900 outline-none focus:border-orange-400"
-        />
-        <Button type="submit" disabled={pending} className="bg-orange-600 hover:bg-orange-700">{labels.saveMenu}</Button>
-      </form>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1 text-sm font-medium">
+          {labels.menu}
+          <Select value={selected} onChange={(event) => setSelected(event.target.value)}>
+            {menus.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+            <option value="">{labels.newMenu}</option>
+          </Select>
+        </label>
+      </div>
+      <MenuForm key={selected || "new"} restaurantId={restaurantId} menuId={selected} menu={menu} pending={pending} labels={labels} onSave={onSave} />
     </section>
   );
+}
+
+function MenuForm({
+  restaurantId,
+  menuId,
+  menu,
+  pending,
+  labels,
+  onSave,
+}: {
+  restaurantId: string;
+  menuId: string;
+  menu: SavedMenu | undefined;
+  pending: boolean;
+  labels: FoodLabels;
+  onSave: (data: FormData) => void;
+}) {
+  const [name, setName] = useState(menu?.name ?? "");
+  const [dishes, setDishes] = useState(() => parseDishes(menu?.text ?? ""));
+  const [additions, setAdditions] = useState(() => parseLines(menu?.additions || FOOD_ADDITIONS.join("\n")));
+  const [dishName, setDishName] = useState("");
+  const [dishPrice, setDishPrice] = useState("");
+  const [additionName, setAdditionName] = useState("");
+
+  function addDish() {
+    const next = dishName.trim();
+    if (!next) return;
+    setDishes((current) => [...current, { name: next, price: dishPrice.trim() }]);
+    setDishName("");
+    setDishPrice("");
+  }
+
+  function addAddition() {
+    const next = additionName.trim();
+    if (!next || additions.includes(next)) return;
+    setAdditions((current) => [...current, next]);
+    setAdditionName("");
+  }
+
+  return (
+    <form
+      className="mt-3 grid gap-4"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const data = new FormData();
+        data.set("restaurantId", restaurantId);
+        data.set("menuId", menuId);
+        data.set("name", name);
+        data.set("items", dishes.map((dish) => dish.price ? `${dish.name} - ${dish.price}` : dish.name).join("\n"));
+        data.set("additions", additions.join("\n"));
+        onSave(data);
+      }}
+    >
+      <label className="grid gap-1 text-sm font-medium">
+        {labels.menuName}
+        <Input value={name} onChange={(event) => setName(event.target.value)} required />
+      </label>
+
+      <div className="overflow-hidden rounded-3xl border border-orange-100 bg-orange-50/50">
+        <div className="flex items-center justify-between px-3 py-2">
+          <h3 className="text-sm font-semibold text-orange-950">{labels.dishes}</h3>
+          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-orange-700">{dishes.length}</span>
+        </div>
+        <ul className="grid">
+          {dishes.map((dish, index) => (
+            <li key={`${dish.name}-${index}`} className="flex items-center gap-2 border-t border-orange-100 bg-white px-3 py-2">
+              <span className="grid size-7 shrink-0 place-items-center rounded-full bg-orange-50 text-xs font-semibold text-orange-800">{index + 1}</span>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{dish.name}</span>
+              {dish.price ? <span className="text-xs tabular-nums text-slate-500" dir="ltr">{dish.price}</span> : null}
+              <button type="button" aria-label={labels.removeItem} onClick={() => setDishes((current) => current.filter((_, item) => item !== index))} className="grid size-9 shrink-0 place-items-center rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-700">
+                <X className="size-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center gap-2 border-t border-orange-100 bg-white p-2">
+          <Input value={dishName} onChange={(event) => setDishName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addDish(); } }} placeholder={labels.dishName} aria-label={labels.dishName} />
+          <Input value={dishPrice} onChange={(event) => setDishPrice(event.target.value)} type="number" min={0} step="0.01" placeholder={labels.price} aria-label={labels.price} className="w-24 shrink-0" />
+          <button type="button" aria-label={labels.addDish} onClick={addDish} className="grid size-11 shrink-0 place-items-center rounded-2xl bg-orange-600 text-white shadow-sm hover:bg-orange-700">
+            <Plus className="size-5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 p-3">
+        <h3 className="text-sm font-semibold">{labels.additions}</h3>
+        <p className="mt-1 text-xs leading-5 text-slate-500">{labels.additionsHint}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {additions.map((addition) => (
+            <span key={addition} className="inline-flex min-h-9 items-center gap-1 rounded-full border border-orange-200 bg-orange-50 py-1 ps-3 pe-1 text-sm font-medium text-orange-950">
+              {addition}
+              <button type="button" aria-label={labels.removeItem} onClick={() => setAdditions((current) => current.filter((item) => item !== addition))} className="grid size-7 place-items-center rounded-full text-orange-700 hover:bg-white">
+                <X className="size-3.5" />
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <Input value={additionName} onChange={(event) => setAdditionName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addAddition(); } }} placeholder={labels.additionName} aria-label={labels.additionName} />
+          <button type="button" aria-label={labels.addAddition} onClick={addAddition} className="grid size-11 shrink-0 place-items-center rounded-2xl bg-orange-600 text-white shadow-sm hover:bg-orange-700">
+            <Plus className="size-5" />
+          </button>
+        </div>
+      </div>
+
+      <Button type="submit" disabled={pending || dishes.length === 0 || name.trim().length === 0} className="h-12 bg-orange-600 hover:bg-orange-700">{labels.saveMenu}</Button>
+    </form>
+  );
+}
+
+function parseLines(value: string) {
+  return value.split(/\n/).map((line) => line.trim()).filter(Boolean);
+}
+
+function parseDishes(value: string) {
+  return parseLines(value).map((line) => {
+    const priced = line.match(/^(.*\S)\s*[-–—|]\s*(\d+(?:[.,]\d{1,2})?)\s*$/);
+    if (!priced) return { name: line, price: "" };
+    return { name: priced[1].trim(), price: priced[2].replace(",", ".") };
+  });
 }
 
 function History({ entries, labels }: { entries: HistoryEntry[]; labels: FoodLabels }) {

@@ -6,7 +6,7 @@ import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/input";
+import { CHIPS_WITHOUT, CHIPS_WITH } from "@/lib/food";
 import { cn } from "@/lib/utils";
 import { submitFoodOrderAction } from "@/server/actions/food";
 
@@ -16,11 +16,17 @@ type Item = { id: string; name: string; emoji: string; price: string | null; add
 export type PickerLabels = {
   remaining: string;
   closed: string;
-  notes: string;
   confirm: string;
   saved: string;
   choose: string;
   price: string;
+  chips: string;
+  chipsWith: string;
+  chipsWithout: string;
+  chipsRequired: string;
+  agreeTitle: string;
+  agree: string;
+  back: string;
 };
 
 export function FoodPicker({
@@ -43,8 +49,9 @@ export function FoodPicker({
   const router = useRouter();
   const [now, setNow] = useState(() => Date.now());
   const [item, setItem] = useState<Item | null>(null);
-  const [chosen, setChosen] = useState<string[]>(current?.additions ?? []);
-  const [notes, setNotes] = useState(current?.notes ?? "");
+  const [chosen, setChosen] = useState<string[]>(withoutChips(current?.additions ?? []));
+  const [chips, setChips] = useState<string>(chipsChoice(current?.additions ?? []));
+  const [checking, setChecking] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -64,13 +71,14 @@ export function FoodPicker({
 
   function openItem(next: Item) {
     setItem(next);
+    setChecking(false);
     if (current?.menuItemId === next.id) {
-      setChosen(current.additions);
-      setNotes(current.notes);
+      setChosen(withoutChips(current.additions));
+      setChips(chipsChoice(current.additions));
       return;
     }
     setChosen([]);
-    setNotes("");
+    setChips("");
   }
 
   function toggle(name: string) {
@@ -82,8 +90,8 @@ export function FoodPicker({
     const data = new FormData();
     data.set("pollId", pollId);
     data.set("menuItemId", item.id);
-    data.set("notes", notes);
     for (const name of chosen) data.append("additions", name);
+    if (chips) data.append("additions", chips);
     startTransition(async () => {
       const result = await submitFoodOrderAction(null, data);
       if (result?.error) {
@@ -133,7 +141,7 @@ export function FoodPicker({
         ))}
       </div>
 
-      <Dialog.Root open={Boolean(item)} onOpenChange={(next) => { if (!next) setItem(null); }}>
+      <Dialog.Root open={Boolean(item)} onOpenChange={(next) => { if (!next) { setItem(null); setChecking(false); } }}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-3xl border border-orange-200 bg-white p-4 shadow-2xl">
@@ -146,32 +154,65 @@ export function FoodPicker({
                 <X className="size-4" />
               </Dialog.Close>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {item?.additions.map((addition) => {
-                const on = chosen.includes(addition.name);
-                return (
-                  <button
-                    key={addition.name}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => toggle(addition.name)}
-                    className={cn(
-                      "min-h-11 rounded-full border px-3 text-sm font-medium",
-                      on ? "border-orange-500 bg-orange-500 text-white" : "border-orange-200 bg-orange-50 text-orange-950",
-                    )}
-                  >
-                    {addition.emoji} {addition.name}
-                  </button>
-                );
-              })}
-            </div>
-            <label className="mt-4 grid gap-1 text-sm font-medium">
-              {labels.notes}
-              <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} className="min-h-24" />
-            </label>
-            <Button type="button" disabled={!open || pending} onClick={submit} className="mt-4 h-12 w-full bg-orange-600 hover:bg-orange-700">
-              {labels.confirm}
-            </Button>
+            {checking ? (
+              <div className="grid gap-3">
+                <p className="text-base font-semibold text-slate-950">{labels.agreeTitle}</p>
+                <div className="rounded-2xl bg-orange-50 px-4 py-3 text-sm leading-7 text-orange-950">
+                  <p className="font-semibold">{item?.name}</p>
+                  <p>{chosen.length > 0 ? chosen.join("، ") : "—"}</p>
+                  <p>{chips === CHIPS_WITH ? labels.chipsWith : labels.chipsWithout}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" variant="outline" disabled={pending} onClick={() => setChecking(false)}>{labels.back}</Button>
+                  <Button type="button" disabled={!open || pending} onClick={submit} className="bg-orange-600 hover:bg-orange-700">{labels.agree}</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {item?.additions.map((addition) => {
+                    const on = chosen.includes(addition.name);
+                    return (
+                      <button
+                        key={addition.name}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggle(addition.name)}
+                        className={cn(
+                          "min-h-11 rounded-full border px-3 text-sm font-medium",
+                          on ? "border-orange-500 bg-orange-500 text-white" : "border-orange-200 bg-orange-50 text-orange-950",
+                        )}
+                      >
+                        {addition.emoji} {addition.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-4 grid gap-2">
+                  <p className="text-sm font-medium">{labels.chips}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Choice on={chips === CHIPS_WITH} onClick={() => { setChips(CHIPS_WITH); setToast(null); }}>{labels.chipsWith}</Choice>
+                    <Choice on={chips === CHIPS_WITHOUT} onClick={() => { setChips(CHIPS_WITHOUT); setToast(null); }}>{labels.chipsWithout}</Choice>
+                  </div>
+                  {!chips && toast === labels.chipsRequired ? <p className="text-sm text-rose-700">{labels.chipsRequired}</p> : null}
+                </div>
+                <Button
+                  type="button"
+                  disabled={!open || pending}
+                  onClick={() => {
+                    if (!chips) {
+                      setToast(labels.chipsRequired);
+                      return;
+                    }
+                    setToast(null);
+                    setChecking(true);
+                  }}
+                  className="mt-4 h-12 w-full bg-orange-600 hover:bg-orange-700"
+                >
+                  {labels.confirm}
+                </Button>
+              </>
+            )}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
@@ -190,4 +231,28 @@ export function FoodPicker({
       </AnimatePresence>
     </div>
   );
+}
+
+function Choice({ on, onClick, children }: { on: boolean; onClick: () => void; children: string }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "min-h-12 rounded-2xl border px-3 text-sm font-semibold",
+        on ? "border-orange-500 bg-orange-500 text-white" : "border-orange-200 bg-orange-50 text-orange-950",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+function withoutChips(names: string[]) {
+  return names.filter((name) => name !== CHIPS_WITH && name !== CHIPS_WITHOUT);
+}
+
+function chipsChoice(names: string[]) {
+  return names.find((name) => name === CHIPS_WITH || name === CHIPS_WITHOUT) ?? "";
 }

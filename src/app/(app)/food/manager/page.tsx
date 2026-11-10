@@ -3,13 +3,26 @@ import { ManagerBoard } from "@/components/food/manager-board";
 import { PageHeader } from "@/components/page-header";
 import { getLocale, requireUser } from "@/lib/auth";
 import { activeStudentWhere } from "@/lib/cohort";
-import { additionNames, foodClipboard, pollIsOpen, studentFoodName } from "@/lib/food";
+import { additionNames, CHIPS_WITHOUT, CHIPS_WITH, FOOD_ADDITIONS, foodClipboard, pollIsOpen, studentFoodName } from "@/lib/food";
 import { asNumber, formatDateTime, formatMoney } from "@/lib/format";
 import { getDictionary } from "@/lib/i18n";
 import { hasPermission } from "@/lib/permissions";
 import { getPrisma } from "@/lib/prisma";
 import { appTimeZone, calendarDateFromISO, formatCalendarDate } from "@/lib/time";
 import { ensureFoodMenu } from "@/server/food-menu";
+
+function additionsText(items: { additions: { name: string }[] }[]) {
+  const names: string[] = [];
+  const seen = new Set<string>();
+  for (const item of items) {
+    for (const addition of item.additions) {
+      if (addition.name === CHIPS_WITH || addition.name === CHIPS_WITHOUT || seen.has(addition.name)) continue;
+      seen.add(addition.name);
+      names.push(addition.name);
+    }
+  }
+  return names.length > 0 ? names.join("\n") : FOOD_ADDITIONS.join("\n");
+}
 
 export default async function FoodManagerPage() {
   const session = await requireUser();
@@ -25,7 +38,7 @@ export default async function FoodManagerPage() {
     db.foodMenu.findMany({
       where: { restaurantId: restaurant.id },
       orderBy: { createdAt: "asc" },
-      include: { items: { where: { available: true }, orderBy: { sortOrder: "asc" } } },
+      include: { items: { where: { available: true }, orderBy: { sortOrder: "asc" }, include: { additions: { orderBy: { sortOrder: "asc" } } } } },
     }),
     db.foodPoll.findMany({
       orderBy: { openedAt: "desc" },
@@ -104,6 +117,7 @@ export default async function FoodManagerPage() {
             const price = asNumber(item.basePrice);
             return price > 0 ? `${item.name} - ${price}` : item.name;
           }).join("\n"),
+          additions: additionsText(menu.items),
         }))}
         clipboard={latest ? clipboardOf(latest) : ""}
         history={polls.filter((poll) => poll.id !== latest?.id).map((poll) => ({
@@ -135,6 +149,14 @@ export default async function FoodManagerPage() {
           menu: dict.food.menu,
           menuName: dict.food.menuName,
           menuItems: dict.food.menuItems,
+          dishes: dict.food.dishes,
+          dishName: dict.food.dishName,
+          addDish: dict.food.addDish,
+          additions: dict.food.additions,
+          additionsHint: dict.food.additionsHint,
+          additionName: dict.food.additionName,
+          addAddition: dict.food.addAddition,
+          removeItem: dict.food.removeItem,
           saveMenu: dict.food.saveMenu,
           newMenu: dict.food.newMenu,
           price: dict.food.price,

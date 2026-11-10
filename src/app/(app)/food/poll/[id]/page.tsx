@@ -57,11 +57,17 @@ export default async function FoodPollPage({ params }: { params: Promise<{ id: s
         labels={{
           remaining: dict.food.endsIn,
           closed: dict.food.closed,
-          notes: dict.food.notes,
           confirm: dict.food.confirm,
           saved: dict.food.saved,
           choose: dict.food.choose,
           price: dict.food.price,
+          chips: dict.food.chips,
+          chipsWith: dict.food.chipsWith,
+          chipsWithout: dict.food.chipsWithout,
+          chipsRequired: dict.food.chipsRequired,
+          agreeTitle: dict.food.agreeTitle,
+          agree: dict.food.agree,
+          back: dict.food.back,
         }}
       />
     </div>

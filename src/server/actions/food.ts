@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { activeStudentWhere } from "@/lib/cohort";
 import { getLocale, requireUser } from "@/lib/auth";
-import { additionNames } from "@/lib/food";
+import { additionNames, CHIPS_WITH, CHIPS_WITHOUT } from "@/lib/food";
 import { field, optional } from "@/lib/form";
 import { dishEmoji } from "@/server/food-menu";
 import { getDictionary } from "@/lib/i18n";
@@ -123,7 +123,7 @@ export async function submitFoodOrderAction(_prev: ActionState, formData: FormDa
   if (!session.roleSlugs.includes("student")) return { error: dict.errors.forbidden };
   const pollId = field(formData, "pollId");
   const menuItemId = field(formData, "menuItemId");
-  const notes = optional(formData, "notes");
+  const notes = optional(formData, "notes")?.replace(/[\r\n]+/g, " ").replace(/\s+/g, " ").trim() || null;
   const additions = additionNames(formData.getAll("additions"));
   if (!pollId || !menuItemId) return { error: dict.errors.invalid };
   const db = getPrisma();
@@ -135,7 +135,9 @@ export async function submitFoodOrderAction(_prev: ActionState, formData: FormDa
   if (!item) return { error: dict.errors.invalid };
   const known = await db.menuAddition.findMany({ where: { menuItemId }, select: { name: true } });
   const allowed = new Set(known.map((addition) => addition.name));
-  const chosen = additions.filter((name) => allowed.has(name));
+  const chips = additions.filter((name) => name === CHIPS_WITH || name === CHIPS_WITHOUT);
+  if (chips.length !== 1) return { error: dict.food.chipsRequired };
+  const chosen = [...additions.filter((name) => allowed.has(name) && name !== CHIPS_WITH && name !== CHIPS_WITHOUT), chips[0]];
   await db.foodOrder.upsert({
     where: { pollId_studentId: { pollId, studentId: session.id } },
     create: { pollId, studentId: session.id, menuItemId, additions: chosen, notes },
@@ -192,6 +194,16 @@ export async function saveFoodMenuAction(_prev: ActionState, formData: FormData)
   const used = removed.filter((row) => row.orders.length > 0).map((row) => row.id);
   if (unused.length > 0) await db.menuItem.deleteMany({ where: { id: { in: unused } } });
   if (used.length > 0) await db.menuItem.updateMany({ where: { id: { in: used } }, data: { available: false } });
+  const additionLines = String(formData.get("additions") ?? "").split(/\n/).map((line) => line.trim()).filter(Boolean).slice(0, 40);
+  const savedItems = await db.menuItem.findMany({ where: { menuId: menu.id, available: true }, select: { id: true } });
+  for (const item of savedItems) {
+    await db.menuAddition.deleteMany({ where: { menuItemId: item.id } });
+    if (additionLines.length > 0) {
+      await db.menuAddition.createMany({
+        data: additionLines.map((name, index) => ({ menuItemId: item.id, name, sortOrder: index })),
+      });
+    }
+  }
   refreshFood();
   return { success: dict.food.menuSaved };
 }
