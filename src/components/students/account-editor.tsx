@@ -77,7 +77,7 @@ export function AccountEditor({
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Trigger className="rounded-lg px-2 py-1 text-xs font-medium text-primary hover:bg-sky-50">{editLabel}</Dialog.Trigger>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[88dvh] overflow-y-auto rounded-t-3xl bg-white p-4 shadow-xl outline-none md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[28rem] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl">
             <div className="mb-3 flex items-center justify-between">
               <Dialog.Title className="font-semibold">{editLabel}</Dialog.Title>

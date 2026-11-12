@@ -204,7 +204,7 @@ export function SessionsBoard({
 
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed inset-y-0 end-0 z-50 flex w-full max-w-lg flex-col bg-white shadow-xl outline-none">
             <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
               <Dialog.Title className="text-base font-semibold">{editing ? labels.edit : labels.create}</Dialog.Title>

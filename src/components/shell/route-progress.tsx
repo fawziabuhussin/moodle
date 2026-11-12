@@ -76,10 +76,10 @@ export function RouteProgress() {
   if (phase === "idle") return null;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-1" aria-hidden>
-      <div className="absolute inset-y-0 start-0" style={{ width: `${width}%` }}>
-        <div className="h-full bg-sky-400 shadow-[0_0_12px_rgba(56,189,248,0.85)]" />
-        <div className="absolute inset-y-0 end-0 w-10 bg-gradient-to-l from-orange-300 to-transparent" />
+    <div className="pointer-events-none fixed inset-x-0 top-0 z-[60] h-[3px]" aria-hidden>
+      <div className="absolute inset-y-0 start-0 transition-[width] duration-200 ease-out" style={{ width: `${width}%` }}>
+        <div className="bg-brand-gradient h-full rounded-e-full shadow-[0_0_14px_rgb(26_143_216/0.8)]" />
+        <div className="absolute end-0 top-1/2 size-2 -translate-y-1/2 rounded-full bg-orange-300 shadow-[0_0_12px_4px_rgb(247_137_29/0.7)]" />
       </div>
     </div>
   );

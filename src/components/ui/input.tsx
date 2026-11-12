@@ -25,7 +25,7 @@ export function Input({ className, type, name, dir, ...props }: React.ComponentP
       name={name}
       dir={numeric ? "ltr" : dir}
       className={cn(
-        "flex h-10 w-full rounded-xl border border-input bg-card px-3 text-base shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+        "flex h-10 w-full rounded-xl border border-input bg-white px-3 text-base shadow-xs outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-slate-400 hover:border-slate-300 focus-visible:border-sky-400 focus-visible:ring-4 focus-visible:ring-sky-400/15 disabled:opacity-50",
         numeric && "tabular-nums",
         className,
       )}
@@ -38,7 +38,7 @@ export function Textarea({ className, ...props }: React.ComponentProps<"textarea
   return (
     <textarea
       className={cn(
-        "flex min-h-24 w-full rounded-xl border border-input bg-card px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+        "flex min-h-24 w-full rounded-xl border border-input bg-white px-3 py-2 text-base shadow-xs outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-slate-400 hover:border-slate-300 focus-visible:border-sky-400 focus-visible:ring-4 focus-visible:ring-sky-400/15 disabled:opacity-50",
         className,
       )}
       {...props}
@@ -50,7 +50,7 @@ export function Select({ className, ...props }: React.ComponentProps<"select">) 
   return (
     <select
       className={cn(
-        "flex h-10 w-full rounded-xl border border-input bg-card px-3 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50",
+        "flex h-10 w-full cursor-pointer rounded-xl border border-input bg-white px-3 text-base shadow-xs outline-none transition-[border-color,box-shadow] duration-150 hover:border-slate-300 focus-visible:border-sky-400 focus-visible:ring-4 focus-visible:ring-sky-400/15 disabled:opacity-50",
         className,
       )}
       {...props}

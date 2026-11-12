@@ -481,7 +481,7 @@ export function StudentsDirectory({
 
       <Dialog.Root open={profile != null} onOpenChange={(next) => { if (!next) setProfile(null); }}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed inset-y-0 end-0 z-50 flex h-full w-full max-w-md flex-col overflow-y-auto bg-white p-4 shadow-xl outline-none">
             {profile ? (
               <>
@@ -548,7 +548,7 @@ export function StudentsDirectory({
 
       <Dialog.Root open={pendingDelete != null} onOpenChange={(next) => { if (!next && busyId == null) setPendingDelete(null); }}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(100vw-1.5rem,26rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-2xl outline-none">
             {pendingDelete ? (
               <>
@@ -570,7 +570,7 @@ export function StudentsDirectory({
 
       <Dialog.Root open={editing != null} onOpenChange={(next) => { if (!next) setEditing(null); }}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[min(92dvh,760px)] w-[min(100vw-1.5rem,36rem)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-3xl bg-white shadow-2xl outline-none">
             {editing ? (
               <form key={editing.id} onSubmit={saveStudent} className="grid min-h-0 gap-4 overflow-y-auto p-5">
@@ -632,7 +632,7 @@ export function StudentsDirectory({
 
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full max-w-[100vw] overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl outline-none md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[440px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:pb-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <Dialog.Title className="text-base font-semibold">{labels.addStudent}</Dialog.Title>

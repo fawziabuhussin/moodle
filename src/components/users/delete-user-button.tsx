@@ -51,7 +51,7 @@ export function DeleteUserButton({
       </button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[min(100vw-1.5rem,26rem)] -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-white p-5 shadow-2xl outline-none">
             <Dialog.Title className="text-lg font-semibold text-slate-950">{label}</Dialog.Title>
             <Dialog.Description className="mt-2 text-sm leading-6 text-slate-600">{confirmLabel}</Dialog.Description>

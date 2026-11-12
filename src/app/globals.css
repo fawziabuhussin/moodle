@@ -1,28 +1,99 @@
 @import "tailwindcss";
 
+/*
+ * Entilaka design tokens.
+ * The palette comes from the logo: sky blue, lime green, and orange figures rising together.
+ * Tailwind's slate, sky, lime, and orange scales are re-tuned here, so every screen that already
+ * uses those classes picks up the brand without per-page edits.
+ */
+@theme {
+  --color-slate-50: #f6f8fc;
+  --color-slate-100: #eef2f8;
+  --color-slate-200: #e1e7f0;
+  --color-slate-300: #c9d2e0;
+  --color-slate-400: #94a1b8;
+  --color-slate-500: #66738c;
+  --color-slate-600: #4a5670;
+  --color-slate-700: #364159;
+  --color-slate-800: #222b40;
+  --color-slate-900: #141b2e;
+  --color-slate-950: #0b1020;
+
+  --color-sky-50: #eef8ff;
+  --color-sky-100: #d9eefe;
+  --color-sky-200: #b6dffc;
+  --color-sky-300: #80c8f8;
+  --color-sky-400: #43aaf0;
+  --color-sky-500: #1a8fd8;
+  --color-sky-600: #0d72b8;
+  --color-sky-700: #0c5b94;
+  --color-sky-800: #0f4c79;
+  --color-sky-900: #123f64;
+  --color-sky-950: #0c2842;
+
+  --color-lime-50: #f6fbea;
+  --color-lime-100: #eaf6d0;
+  --color-lime-200: #d5eda5;
+  --color-lime-300: #b8df6f;
+  --color-lime-400: #9fd047;
+  --color-lime-500: #84b82c;
+  --color-lime-600: #66931f;
+  --color-lime-700: #4e701c;
+  --color-lime-800: #40591c;
+  --color-lime-900: #374c1c;
+  --color-lime-950: #1b2a0a;
+
+  --color-orange-50: #fff7ec;
+  --color-orange-100: #ffecd2;
+  --color-orange-200: #fed5a4;
+  --color-orange-300: #fdb66b;
+  --color-orange-400: #fb9b35;
+  --color-orange-500: #f7891d;
+  --color-orange-600: #e06a0c;
+  --color-orange-700: #b94f0d;
+  --color-orange-800: #933f12;
+  --color-orange-900: #773512;
+  --color-orange-950: #401807;
+
+  --shadow-xs: 0 1px 2px rgb(20 27 46 / 0.05);
+  --shadow-sm: 0 1px 2px rgb(20 27 46 / 0.04), 0 2px 10px -3px rgb(20 27 46 / 0.07);
+  --shadow: 0 1px 3px rgb(20 27 46 / 0.05), 0 6px 18px -6px rgb(20 27 46 / 0.1);
+  --shadow-md: 0 2px 4px rgb(20 27 46 / 0.04), 0 10px 28px -8px rgb(20 27 46 / 0.14);
+  --shadow-lg: 0 4px 10px rgb(20 27 46 / 0.05), 0 20px 44px -12px rgb(20 27 46 / 0.2);
+  --shadow-xl: 0 8px 16px rgb(20 27 46 / 0.06), 0 28px 64px -16px rgb(20 27 46 / 0.28);
+  --shadow-2xl: 0 32px 80px -20px rgb(11 16 32 / 0.45);
+
+  --ease-spring: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #f4f7fb;
+  --foreground: #141b2e;
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --navy: #0f172a;
-  --primary: #0284c7;
+  --card-foreground: #141b2e;
+  --navy: #0b1020;
+  --ink: #0b1020;
+  --ink-2: #111a33;
+  --primary: #0d72b8;
   --primary-foreground: #ffffff;
-  --primary-bright: #0ea5e9;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f1f5f9;
-  --muted-foreground: #64748b;
-  --accent: #e0f2fe;
-  --accent-foreground: #075985;
+  --primary-bright: #1a8fd8;
+  --secondary: #eef2f8;
+  --secondary-foreground: #141b2e;
+  --muted: #eef2f8;
+  --muted-foreground: #66738c;
+  --accent: #e6f3fd;
+  --accent-foreground: #0c5b94;
   --destructive: #e11d48;
-  --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #0284c7;
+  --border: #e1e7f0;
+  --input: #d6deea;
+  --ring: #1a8fd8;
   --radius: 0.9rem;
-  --brand-green: #65a30d;
-  --brand-orange: #f97316;
+  --brand-blue: #1a8fd8;
+  --brand-green: #84b82c;
+  --brand-orange: #f7891d;
   --brand-gold: #d97706;
+  --brand-gradient: linear-gradient(90deg, #1a8fd8 0%, #84b82c 52%, #f7891d 100%);
 }
 
 @theme inline {
@@ -43,6 +114,10 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-green: var(--brand-green);
+  --color-brand-orange: var(--brand-orange);
+  --color-ink: var(--ink);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -53,6 +128,11 @@
 
 * {
   border-color: var(--border);
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scrollbar-color: var(--color-slate-300) transparent;
 }
 
 html[lang="he"] body {
@@ -74,9 +154,33 @@ html[lang="ar"] h3 {
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   background: var(--background);
   color: var(--foreground);
   touch-action: manipulation;
+}
+
+/* A soft brand mesh behind the app. A fixed pseudo-element keeps it still on iOS, where background-attachment: fixed is unreliable. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(42rem 28rem at 100% -6%, rgb(26 143 216 / 0.11), transparent 62%),
+    radial-gradient(34rem 24rem at -8% 18%, rgb(132 184 44 / 0.08), transparent 60%),
+    radial-gradient(38rem 26rem at 70% 108%, rgb(247 137 29 / 0.08), transparent 62%),
+    var(--background);
+}
+
+::selection {
+  background: rgb(26 143 216 / 0.2);
+}
+
+:focus-visible {
+  outline-color: var(--ring);
 }
 
 .font-arabic {
@@ -89,6 +193,67 @@ bdi[dir="ltr"],
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
+
+/* ---------- Brand utilities ---------- */
+
+.bg-brand-gradient {
+  background-image: var(--brand-gradient);
+}
+
+.text-brand-gradient {
+  background-image: var(--brand-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+[dir="rtl"] .bg-brand-gradient,
+[dir="rtl"] .text-brand-gradient {
+  background-image: linear-gradient(270deg, #1a8fd8 0%, #84b82c 52%, #f7891d 100%);
+}
+
+.bg-ink {
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(28rem 20rem at 0% 0%, rgb(26 143 216 / 0.22), transparent 60%),
+    radial-gradient(22rem 18rem at 100% 100%, rgb(247 137 29 / 0.14), transparent 62%),
+    linear-gradient(180deg, #0f1730 0%, #0b1020 100%);
+}
+
+.bg-dots {
+  background-image: radial-gradient(rgb(255 255 255 / 0.12) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.bg-dots-dark {
+  background-image: radial-gradient(rgb(20 27 46 / 0.07) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+.glass {
+  background: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  backdrop-filter: saturate(1.6) blur(18px);
+}
+
+.glass-dark {
+  background: rgb(11 16 32 / 0.78);
+  -webkit-backdrop-filter: saturate(1.4) blur(18px);
+  backdrop-filter: saturate(1.4) blur(18px);
+}
+
+/* A hairline in the brand colours along the bottom edge. The element must be positioned (relative, sticky, …). */
+.brand-hairline::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background-image: var(--brand-gradient);
+  opacity: 0.9;
+}
+
+/* ---------- Motion ---------- */
 
 @keyframes entilaka-drawer {
   from { transform: translate3d(-100%, 0, 0); }
@@ -105,6 +270,42 @@ bdi[dir="ltr"],
   to { background-position: -140% 0; }
 }
 
+@keyframes entilaka-rise {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes entilaka-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes entilaka-pop {
+  from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.97); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes entilaka-sheet {
+  from { transform: translate3d(0, 100%, 0); }
+  to { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes entilaka-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -8px, 0); }
+}
+
+@keyframes entilaka-draw {
+  from { stroke-dashoffset: var(--dash, 400); }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes entilaka-pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(247 137 29 / 0.55); }
+  70% { box-shadow: 0 0 0 6px rgb(247 137 29 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(247 137 29 / 0); }
+}
+
 .entilaka-shimmer {
   background-image: linear-gradient(100deg, transparent 28%, rgba(255, 255, 255, 0.78) 50%, transparent 72%);
   background-size: 220% 100%;
@@ -112,25 +313,101 @@ bdi[dir="ltr"],
   animation: entilaka-shimmer 1.35s ease-in-out infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .entilaka-shimmer {
-    animation: none;
-  }
-}
-
 .entilaka-drawer {
-  animation: entilaka-drawer 220ms ease-out;
+  animation: entilaka-drawer 260ms var(--ease-out-quint);
 }
 
 [dir="rtl"] .entilaka-drawer {
   animation-name: entilaka-drawer-rtl;
 }
 
+.entilaka-rise {
+  animation: entilaka-rise 480ms var(--ease-out-quint) both;
+}
+
+.entilaka-stagger > * {
+  animation: entilaka-rise 520ms var(--ease-out-quint) both;
+}
+
+.entilaka-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.entilaka-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.entilaka-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.entilaka-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.entilaka-stagger > *:nth-child(n + 6) { animation-delay: 300ms; }
+
+.entilaka-float {
+  animation: entilaka-float 6s ease-in-out infinite;
+}
+
+.entilaka-draw {
+  stroke-dasharray: var(--dash, 400);
+  animation: entilaka-draw 1.6s var(--ease-out-quint) both;
+}
+
+.entilaka-pulse {
+  animation: entilaka-pulse-ring 2.2s ease-out infinite;
+}
+
+/* Every Radix dialog in the app fades its backdrop and lifts its panel in. */
+.entilaka-overlay[data-state="open"] {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  animation: entilaka-fade 200ms ease-out;
+}
+
+[role="dialog"][data-state="open"] {
+  animation: entilaka-pop 300ms var(--ease-out-quint);
+}
+
+@media (max-width: 767px) {
+  [role="dialog"][data-state="open"].bottom-0 {
+    animation: entilaka-sheet 320ms var(--ease-out-quint);
+  }
+}
+
+/* Nicer thin scrollbars inside panels on desktop. */
+@media (pointer: fine) {
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-slate-300);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover { background-color: var(--color-slate-400); }
+  *::-webkit-scrollbar-track { background: transparent; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entilaka-shimmer,
+  .entilaka-rise,
+  .entilaka-stagger > *,
+  .entilaka-float,
+  .entilaka-draw,
+  .entilaka-pulse,
+  .entilaka-overlay[data-state="open"],
+  [role="dialog"][data-state="open"] {
+    animation: none !important;
+  }
+  .entilaka-draw {
+    stroke-dasharray: none;
+  }
+}
+
+/* ---------- Forms ---------- */
+
 input,
 select,
 textarea,
 button {
   font: inherit;
+}
+
+@layer base {
+  input[type="checkbox"],
+  input[type="radio"] {
+    accent-color: var(--primary);
+  }
 }
 
 input[type="time"],
@@ -143,4 +420,22 @@ input[type="tel"] {
   font-family: var(--font-inter), var(--font-heebo), sans-serif;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+/* Tables across the app get a calmer header and row hover. Kept in the base layer so utilities still win. */
+@layer base {
+  table thead th {
+    font-weight: 600;
+    color: var(--color-slate-500);
+  }
+
+  table tbody tr {
+    transition: background-color 120ms ease;
+  }
+
+  @media (pointer: fine) {
+    table tbody tr:hover {
+      background-color: rgb(238 248 255 / 0.55);
+    }
+  }
 }

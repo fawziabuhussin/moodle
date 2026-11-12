@@ -143,7 +143,7 @@ export function FoodPicker({
 
       <Dialog.Root open={Boolean(item)} onOpenChange={(next) => { if (!next) { setItem(null); setChecking(false); } }}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+          <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
           <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[85dvh] overflow-y-auto rounded-t-3xl border border-orange-200 bg-white p-4 shadow-2xl">
             <div className="mx-auto mb-3 h-1.5 w-12 rounded-full bg-orange-200" />
             <div className="mb-4 flex items-start justify-between gap-3">

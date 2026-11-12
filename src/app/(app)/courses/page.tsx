@@ -1,4 +1,5 @@
 import { CoursesCatalog } from "@/components/courses/catalog";
+import { courseProgress } from "@/components/courses/course-theme";
 import { CreateCourseDialog } from "@/components/courses/create-course-dialog";
 import { PageHeader } from "@/components/page-header";
 import { isStudentPortal } from "@/lib/access";
@@ -85,11 +86,15 @@ export default async function CoursesPage() {
           active: course.isActive,
           startDate: isoDate(course.startDate),
           endDate: isoDate(course.endDate),
+          progress: courseProgress(course.startDate, course.endDate),
         }))}
         searchLabel={dict.courses.search}
         studentsLabel={dict.courses.students}
         teachersLabel={dict.courses.teachers}
         inactiveLabel={dict.courses.inactive}
+        activeLabel={dict.common.active}
+        allLabel={dict.attendance.all}
+        coursesLabel={portal ? dict.nav.studentCourses : dict.courses.title}
         emptyLabel={dict.courses.empty}
       />
     </div>

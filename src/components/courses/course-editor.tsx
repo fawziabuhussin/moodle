@@ -21,6 +21,7 @@ export function CourseEditor({
   saveLabel,
   savingLabel,
   closeLabel,
+  triggerClassName,
 }: {
   course: { id: string; code: string; title: string; description: string; startDate: string; endDate: string; isActive: boolean };
   canChangeCode: boolean;
@@ -35,6 +36,7 @@ export function CourseEditor({
   saveLabel: string;
   savingLabel: string;
   closeLabel: string;
+  triggerClassName?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -57,11 +59,11 @@ export function CourseEditor({
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
-      <Dialog.Trigger className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50">
+      <Dialog.Trigger className={triggerClassName ?? "inline-flex h-10 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"}>
         {label}
       </Dialog.Trigger>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm" />
+        <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-950/45 backdrop-blur-sm" />
         <Dialog.Content className="fixed inset-x-3 bottom-3 z-50 max-h-[88dvh] overflow-y-auto rounded-3xl border border-white/70 bg-white/95 p-4 shadow-2xl outline-none backdrop-blur-xl md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[36rem] md:-translate-x-1/2 md:-translate-y-1/2">
           <div className="mb-4 flex items-start justify-between gap-3">
             <Dialog.Title className="text-xl font-semibold">{label}</Dialog.Title>

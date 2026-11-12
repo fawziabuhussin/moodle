@@ -98,7 +98,7 @@ export default async function FoodManagerPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl">
+    <div className="mx-auto max-w-6xl">
       <PageHeader title={dict.food.title} description={dict.food.subtitle} />
       <ManagerBoard
         restaurantId={restaurant.id}

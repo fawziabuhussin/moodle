@@ -106,7 +106,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
-      <PageHeader title={dict.dashboard.title} />
+      <PageHeader title={dict.dashboard.title} bare />
       <CommandCenter
         copy={copy}
         locale={locale}

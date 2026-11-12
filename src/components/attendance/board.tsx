@@ -610,7 +610,7 @@ function HoursDialog({
   return (
     <Dialog.Root open={student != null} onOpenChange={(open) => { if (!open) onClose(); }}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-slate-900/40" />
+        <Dialog.Overlay className="entilaka-overlay fixed inset-0 z-50 bg-slate-900/40" />
         <Dialog.Content className="fixed inset-x-0 bottom-0 z-50 max-h-[90dvh] w-full max-w-[100vw] overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl outline-none md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:w-[420px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:pb-4">
           <div className="mb-3 flex items-start justify-between gap-3">
             <div>

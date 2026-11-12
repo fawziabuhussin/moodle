@@ -25,10 +25,10 @@ export function ActionForm({
   );
 }
 
-export function SubmitButton({ label, pendingLabel, variant = "default", size = "default" }: { label: string; pendingLabel: string; variant?: "default" | "secondary" | "outline" | "ghost" | "destructive"; size?: "default" | "sm" | "lg" | "icon" }) {
+export function SubmitButton({ label, pendingLabel, variant = "default", size = "default", className }: { label: string; pendingLabel: string; variant?: "default" | "secondary" | "outline" | "ghost" | "destructive" | "brand"; size?: "default" | "sm" | "lg" | "icon"; className?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" disabled={pending} variant={variant} size={size}>
+    <Button type="submit" disabled={pending} variant={variant} size={size} className={className}>
       {pending ? pendingLabel : label}
     </Button>
   );
