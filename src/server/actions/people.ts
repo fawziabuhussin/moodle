@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getLocale, hashPassword, requirePermission } from "@/lib/auth";
+import { getLocale, hashPassword, requirePermission, revokeSessions } from "@/lib/auth";
 import { ACTIVE_COHORT } from "@/lib/cohort";
 import { field, isEmail, isNationalId, isUniqueConflict, optional } from "@/lib/form";
 import { getDictionary } from "@/lib/i18n";
@@ -62,6 +62,13 @@ async function syncStudentProfile(userId: string, roleIds: string[], formData: F
   });
 }
 
+/** True when a new password differs from the current one, so old sign-ins should be ended. */
+async function passwordChanged(userId: string | null | undefined, password: string | null | undefined) {
+  if (!userId || !password) return false;
+  const current = await getPrisma().user.findUnique({ where: { id: userId }, select: { loginPassword: true } });
+  return current?.loginPassword !== password;
+}
+
 export async function createUserAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   await requirePermission("manage_users_and_roles");
   const dict = getDictionary(await getLocale());
@@ -117,6 +124,7 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
   if (password && password.length < 8) return { error: dict.errors.invalid };
 
   const db = getPrisma();
+  const rotate = await passwordChanged(id, password);
   try {
     await db.user.update({
       where: { id },
@@ -139,6 +147,7 @@ export async function updateUserAction(_prev: ActionState, formData: FormData): 
       },
     });
     await syncStudentProfile(id, roleIds, formData);
+    if (rotate) await revokeSessions(id);
   } catch (error) {
     if (isUniqueConflict(error)) return { error: dict.users.emailTaken };
     return { error: dict.errors.generic };
@@ -203,6 +212,7 @@ export async function saveManagedUserAction(_prev: ActionState, formData: FormDa
   if (!id && initialPassword.length < 8) return { error: dict.errors.invalid };
   const nextPasswordHash = !id ? await hashPassword(initialPassword) : password ? await hashPassword(password) : null;
 
+  const rotate = await passwordChanged(id, password);
   try {
     const userId = await db.$transaction(async (tx) => {
       const data = {
@@ -262,6 +272,7 @@ export async function saveManagedUserAction(_prev: ActionState, formData: FormDa
       }
       return saved.id;
     });
+    if (rotate) await revokeSessions(userId);
     revalidatePath("/users");
     revalidatePath(`/users/${userId}`);
     revalidatePath("/students");
@@ -316,6 +327,7 @@ export async function updateDirectoryStudentAction(_prev: ActionState, formData:
     select: { id: true },
   });
   if (!student) return { error: dict.errors.invalid };
+  const rotate = await passwordChanged(id, password);
 
   try {
     await db.user.update({
@@ -330,6 +342,7 @@ export async function updateDirectoryStudentAction(_prev: ActionState, formData:
         ...(password ? { passwordHash: await hashPassword(password), loginPassword: password } : {}),
       },
     });
+    if (rotate) await revokeSessions(id);
     await db.studentProfile.upsert({
       where: { userId: id },
       create: {
@@ -483,6 +496,7 @@ export async function resetStudentPasswordAction(_prev: ActionState, formData: F
   const profile = await getPrisma().studentProfile.findUnique({ where: { userId }, select: { nationalId: true } });
   if (!profile?.nationalId || !/^\d{9}$/.test(profile.nationalId)) return { error: dict.errors.invalid };
   await getPrisma().user.update({ where: { id: userId }, data: { passwordHash: await hashPassword(profile.nationalId), loginPassword: profile.nationalId } });
+  await revokeSessions(userId);
   revalidatePath("/users");
   revalidatePath(`/students/${userId}`);
   return { success: dict.users.passwordReset };

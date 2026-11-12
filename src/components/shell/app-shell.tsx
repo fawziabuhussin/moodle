@@ -68,7 +68,16 @@ export function AppShell({
             links={links}
             unread={unread}
             notificationsLabel={dict.nav.notifications}
-            logoutLabel={dict.nav.logout}
+            portal={flat}
+            user={{ name: fullName(user), email: user.email, initials: initials(user), roleLine: user.roleNames.join(" · ") }}
+            menuLabels={{
+              account: dict.nav.account,
+              dashboard: dict.nav.dashboard,
+              myBoard: dict.nav.myBoard,
+              notifications: dict.nav.notifications,
+              logout: dict.nav.logout,
+              logoutEverywhere: dict.nav.logoutEverywhere,
+            }}
           />
           <main className="entilaka-rise mx-auto min-w-0 max-w-[1600px] px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-8 md:pt-6 md:pb-12">{children}</main>
         </div>

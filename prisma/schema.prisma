@@ -658,3 +658,13 @@ model FoodOrder {
   @@unique([pollId, studentId])
   @@index([pollId])
 }
+
+/// Failed sign-in counters, keyed by account ("id:<identifier>") or network ("ip:<address>").
+/// Used to lock out password guessing.
+model LoginThrottle {
+  key         String    @id
+  failures    Int       @default(0)
+  windowStart DateTime  @default(now())
+  lockedUntil DateTime?
+  updatedAt   DateTime  @updatedAt
+}

@@ -13,6 +13,8 @@ import { hasPermission } from "@/lib/permissions";
 import type { SessionUser } from "@/lib/types";
 
 const TOKEN_TTL_SECONDS = 60 * 60 * 24 * 30;
+// bcrypt hash of a random string nobody knows; compared against when an account does not exist.
+const DUMMY_HASH = "$2b$10$efvbWCwVBEBjelfV2nEwkO7VUf.YtJYmEFh5WYzWMgOFxZNi4f1Bm";
 
 function secretKey() {
   const secret = process.env.AUTH_SECRET;
@@ -123,9 +125,9 @@ export async function authenticate(identifier: string, password: string, userAge
   const user = /^\d{9}$/.test(key)
     ? await db.user.findFirst({ where: { isActive: true, studentProfile: { is: { nationalId: key } } } })
     : await db.user.findUnique({ where: { email: key } });
-  if (!user || !user.isActive) return null;
-  const valid = await compare(password, user.passwordHash);
-  if (!valid) return null;
+  // Always run one bcrypt comparison so response time does not reveal whether the account exists.
+  const valid = await compare(password, user?.passwordHash ?? DUMMY_HASH);
+  if (!user || !user.isActive || !valid) return null;
 
   const sessionId = randomUUID();
   const token = await signToken(user.id, sessionId);
@@ -157,6 +159,7 @@ export async function attachSessionCookie(token: string) {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
+    priority: "high",
     path: "/",
     maxAge: TOKEN_TTL_SECONDS,
   });
@@ -169,6 +172,14 @@ export async function clearSession() {
   }
   const jar = await cookies();
   jar.delete(TOKEN_COOKIE);
+}
+
+/** Signs a user out everywhere, optionally keeping the session the request came from. */
+export async function revokeSessions(userId: string, { keepCurrent = false }: { keepCurrent?: boolean } = {}) {
+  const token = keepCurrent ? await readAuthToken() : null;
+  await getPrisma().authSession.deleteMany({
+    where: { userId, ...(token ? { NOT: { tokenHash: hashToken(token) } } : {}) },
+  });
 }
 
 export async function getLocale(): Promise<Locale> {

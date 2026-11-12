@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { compare } from "bcryptjs";
 import { isStudentPortal } from "@/lib/access";
-import { getLocale, hashPassword, requireUser } from "@/lib/auth";
+import { getLocale, hashPassword, requireUser, revokeSessions } from "@/lib/auth";
 import { field, isEmail, optional } from "@/lib/form";
 import { getDictionary } from "@/lib/i18n";
 import { getPrisma } from "@/lib/prisma";
@@ -55,10 +55,12 @@ export async function changeOwnPasswordAction(_prev: ActionState, formData: Form
   if (!isStudentPortal(session)) return { error: dict.errors.forbidden };
   const current = field(formData, "currentPassword");
   const next = field(formData, "newPassword");
-  if (next.length < 8) return { error: dict.errors.invalid };
+  if (next.length < 8 || next.length > 256) return { error: dict.errors.invalid };
   const user = await getPrisma().user.findUnique({ where: { id: session.id }, select: { passwordHash: true } });
   if (!user || !(await compare(current, user.passwordHash))) return { error: dict.login.invalid };
   await getPrisma().user.update({ where: { id: session.id }, data: { passwordHash: await hashPassword(next), loginPassword: next } });
+  // Sign out every other device that knew the old password.
+  await revokeSessions(session.id, { keepCurrent: true });
   revalidatePath("/student-board");
   return { success: dict.common.saved };
 }

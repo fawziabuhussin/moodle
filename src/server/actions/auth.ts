@@ -2,7 +2,8 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { attachSessionCookie, authenticate, clearSession, getLocale, getSession } from "@/lib/auth";
+import { attachSessionCookie, authenticate, clearSession, getLocale, getSession, requireUser, revokeSessions } from "@/lib/auth";
+import { clearFailedLogins, clientAddress, lockedMinutes, recordFailedLogin } from "@/lib/login-throttle";
 import { LOCALE_COOKIE, isLocale } from "@/lib/constants";
 import { field, isLoginIdentifier } from "@/lib/form";
 import { getDictionary } from "@/lib/i18n";
@@ -14,15 +15,23 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
   const dict = getDictionary(await getLocale());
   const email = field(formData, "email").toLowerCase();
   const password = String(formData.get("password") ?? "");
-  if (!isLoginIdentifier(email) || password.length < 8) return { error: dict.login.invalid };
+  if (!isLoginIdentifier(email) || password.length < 8 || password.length > 256) return { error: dict.login.invalid };
+
+  const address = await clientAddress();
+  const wait = await lockedMinutes(email, address);
+  if (wait > 0) return { error: dict.login.locked.replace("{minutes}", String(wait)) };
 
   let result: Awaited<ReturnType<typeof authenticate>> = null;
   try {
-    result = await authenticate(email, password, null);
+    result = await authenticate(email, password, (await headers()).get("user-agent"));
   } catch {
     return { error: dict.errors.database };
   }
-  if (!result) return { error: dict.login.invalid };
+  if (!result) {
+    await recordFailedLogin(email, address);
+    return { error: dict.login.invalid };
+  }
+  await clearFailedLogins(email);
 
   await attachSessionCookie(result.token);
   const jar = await cookies();
@@ -33,6 +42,13 @@ export async function loginAction(_prev: ActionState, formData: FormData): Promi
 }
 
 export async function logoutAction() {
+  await clearSession();
+  redirect("/login");
+}
+
+export async function logoutEverywhereAction() {
+  const session = await requireUser();
+  await revokeSessions(session.id);
   await clearSession();
   redirect("/login");
 }

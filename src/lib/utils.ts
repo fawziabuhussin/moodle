@@ -25,7 +25,8 @@ export function safeHttpUrl(value: string | null | undefined) {
 }
 
 export function safeNextPath(value: string | null | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/login")) {
+  // Only same-site paths. Backslashes and control characters are refused because browsers treat a slash followed by a backslash as "//".
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/login") || /[\\\u0000-\u001f\u007f]/.test(value)) {
     return "/dashboard";
   }
   return value;

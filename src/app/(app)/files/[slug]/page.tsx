@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { safeHttpUrl } from "@/lib/utils";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/form";
 import { SheetEditor } from "@/components/files/sheet-editor";
@@ -104,7 +105,7 @@ export default async function DriveFilePage({ params }: { params: Promise<{ slug
       {file.kind === "FORM_LINK" ? (
         <article className="grid gap-3 rounded-2xl border border-slate-200/80 bg-card p-4 text-sm shadow-sm">
           <p className="whitespace-pre-wrap">{file.body}</p>
-          {file.linkUrl ? <Link href={file.linkUrl} className="break-all text-sky-800">{file.linkUrl}</Link> : null}
+          {safeHttpUrl(file.linkUrl) ? <a href={safeHttpUrl(file.linkUrl)!} target="_blank" rel="noopener noreferrer" className="break-all text-sky-800">{file.linkUrl}</a> : null}
         </article>
       ) : null}
       {file.kind === "PDF_UPLOAD" ? (

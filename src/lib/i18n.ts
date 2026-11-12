@@ -9,6 +9,7 @@ const he = {
     submit: "כניסה",
     submitting: "נכנסים…",
     invalid: "הפרטים או הסיסמה אינם נכונים.",
+    locked: "יותר מדי ניסיונות כניסה. נסו שוב בעוד {minutes} דקות.",
     privacy: "מדיניות פרטיות",
   },
   nav: {
@@ -35,6 +36,9 @@ const he = {
     administration: "ניהול",
     system: "מערכת",
     logout: "יציאה",
+    logoutEverywhere: "יציאה מכל המכשירים",
+    account: "החשבון שלי",
+    myBoard: "הלוח האישי שלי",
     more: "עוד",
   },
   common: {
@@ -583,6 +587,7 @@ const ar: Dictionary = {
     submit: "دخول",
     submitting: "جارٍ الدخول…",
     invalid: "البيانات أو كلمة السر غير صحيحة.",
+    locked: "محاولات دخول كثيرة. حاولوا مجددًا بعد {minutes} دقيقة.",
     privacy: "سياسة الخصوصية",
   },
   nav: {
@@ -609,6 +614,9 @@ const ar: Dictionary = {
     administration: "إداري",
     system: "النظام",
     logout: "خروج",
+    logoutEverywhere: "الخروج من كل الأجهزة",
+    account: "حسابي",
+    myBoard: "لوحتي الشخصية",
     more: "المزيد",
   },
   common: {
@@ -1155,6 +1163,7 @@ const en: Dictionary = {
     submit: "Sign in",
     submitting: "Signing in…",
     invalid: "The details or password are incorrect.",
+    locked: "Too many sign-in attempts. Try again in {minutes} minutes.",
     privacy: "Privacy policy",
   },
   nav: {
@@ -1181,6 +1190,9 @@ const en: Dictionary = {
     administration: "Administration",
     system: "System",
     logout: "Sign out",
+    logoutEverywhere: "Sign out of all devices",
+    account: "My account",
+    myBoard: "My board",
     more: "More",
   },
   common: {

@@ -1,14 +1,15 @@
 "use client";
 
-import { Bell, ChevronLeft, LogOut } from "lucide-react";
+import { Bell, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BrandMark } from "@/components/brand";
 import { usePageTitle } from "@/components/shell/page-title";
 import type { ShellLink } from "@/components/shell/nav-links";
+import { UserMenu, type UserMenuLabels } from "@/components/shell/user-menu";
 import type { Locale } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { logoutAction, setLocaleAction } from "@/server/actions/auth";
+import { setLocaleAction } from "@/server/actions/auth";
 
 function sectionTitle(pathname: string, links: ShellLink[]) {
   const match = [...links]
@@ -22,13 +23,17 @@ export function ShellHeader({
   links,
   unread,
   notificationsLabel,
-  logoutLabel,
+  user,
+  portal,
+  menuLabels,
 }: {
   locale: Locale;
   links: ShellLink[];
   unread: number;
   notificationsLabel: string;
-  logoutLabel: string;
+  user: { name: string; email: string; initials: string; roleLine: string };
+  portal: boolean;
+  menuLabels: UserMenuLabels;
 }) {
   const pathname = usePathname();
   const registered = usePageTitle();
@@ -80,11 +85,7 @@ export function ShellHeader({
             </span>
           ) : null}
         </Link>
-        <form action={logoutAction} className="shrink-0 md:hidden">
-          <button className="grid size-10 place-items-center rounded-xl text-slate-300 ring-1 ring-white/10 hover:bg-white/10" aria-label={logoutLabel}>
-            <LogOut className="size-4 rtl:-scale-x-100" />
-          </button>
-        </form>
+        <UserMenu locale={locale} user={user} portal={portal} unread={unread} labels={menuLabels} />
       </div>
     </header>
   );
